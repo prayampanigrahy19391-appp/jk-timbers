@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@theme {
+  --color-wood-50: #fbf7f3;
+  --color-wood-100: #f5ece2;
+  --color-wood-200: #ead3bd;
+  --color-wood-300: #dfb592;
+  --color-wood-400: #d19062;
+  --color-wood-500: #c5743b;
+  --color-wood-600: #b85e31;
+  --color-wood-700: #994a2a;
+  --color-wood-800: #7d3d26;
+  --color-wood-900: #653422;
+  --color-wood-950: #36190e;
+
+  --color-timber-50: #f5f6f4;
+  --color-timber-100: #e5e8e3;
+  --color-timber-200: #ccceca;
+  --color-timber-300: #a9b0a9;
+  --color-timber-400: #818c81;
+  --color-timber-500: #647164;
+  --color-timber-600: #4f5a4f;
+  --color-timber-700: #414941;
+  --color-timber-800: #353d36;
+  --color-timber-900: #2f342f;
+  --color-timber-950: #181d18;
+
+  --color-accent: #d4af37; /* Gold */
+
+  --font-sans: var(--font-inter), sans-serif;
+  --font-serif: var(--font-playfair), serif;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #1e1b18; /* Dark brown-black for text */
+  --card: #ffffff;
+  --card-foreground: #1e1b18;
+  --border: #ead3bd;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #181d18;
+    --foreground: #fbf7f3;
+    --card: #2f342f;
+    --card-foreground: #fbf7f3;
+    --border: #4f5a4f;
+  }
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Glassmorphism Utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.glass-dark {
+  background: rgba(24, 29, 24, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-wood-400);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-wood-600);
+}
