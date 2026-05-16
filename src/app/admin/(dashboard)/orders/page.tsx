@@ -1,18 +1,11 @@
-import { prisma } from '@/lib/prisma';
+import { getAdminOrders } from '@/services/orderService';
 import { Mail, Phone, MapPin, ShoppingCart } from 'lucide-react';
 import UpdateStatusButton from './UpdateStatusButton';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminOrdersPage() {
-  const orders = await prisma.order.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: {
-      orderItems: {
-        include: { product: true }
-      }
-    }
-  });
+  const orders = await getAdminOrders();
 
   return (
     <>
@@ -49,7 +42,7 @@ export default async function AdminOrdersPage() {
                 <div className="flex items-center gap-4">
                   <div className="text-right">
                     <p className="text-xs text-timber-500 uppercase tracking-wider font-bold mb-1">Total Amount</p>
-                    <p className="text-xl font-black text-wood-950 dark:text-white">₹{order.total.toLocaleString('en-IN')}</p>
+                    <p className="text-xl font-black text-wood-950 dark:text-white">₹{order.total.toNumber().toLocaleString('en-IN')}</p>
                   </div>
                   {/* Status Update Button Simulation */}
                   {order.status === 'PENDING' && (
@@ -86,7 +79,7 @@ export default async function AdminOrdersPage() {
                           <span className="font-bold text-wood-900 dark:text-white mr-2">{item.quantity}x</span>
                           {item.product.name}
                         </span>
-                        <span className="font-medium text-wood-900 dark:text-white">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                        <span className="font-medium text-wood-900 dark:text-white">₹{(item.price.toNumber() * item.quantity).toLocaleString('en-IN')}</span>
                       </li>
                     ))}
                   </ul>

@@ -65,7 +65,12 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Custom Scrollbar */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-wood-400) transparent;
+}
+
+/* Custom Scrollbar (Webkit) */
 ::-webkit-scrollbar {
   width: 8px;
 }

@@ -1,14 +1,11 @@
-import { prisma } from '@/lib/prisma';
+import { getAdminProducts } from '@/services/productService';
 import { Package, Plus } from 'lucide-react';
 import Image from 'next/image';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminProductsPage() {
-  const products = await prisma.product.findMany({
-    include: { category: true },
-    orderBy: { createdAt: 'desc' }
-  });
+  const products = await getAdminProducts();
 
   return (
     <>
@@ -44,15 +41,20 @@ export default async function AdminProductsPage() {
                 </tr>
               ) : (
                 products.map(product => {
-                  const images = JSON.parse(product.images);
-                  const mainImage = images.length > 0 ? images[0] : '/placeholder.png';
+                  let mainImage = '/textures/teak.webp';
+                  try {
+                    const images = product.images as string[];
+                    if (Array.isArray(images) && images.length > 0) mainImage = images[0];
+                  } catch {
+                    // Use fallback image
+                  }
                   
                   return (
                     <tr key={product.id} className="hover:bg-wood-50 dark:hover:bg-timber-800/50 group">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
                           <div className="relative w-12 h-12 rounded-lg bg-timber-100 overflow-hidden shrink-0">
-                            <Image src={mainImage} alt={product.name} fill className="object-cover" />
+                            <Image src={mainImage} alt={product.name} fill sizes="48px" className="object-cover" />
                           </div>
                           <div>
                             <p className="font-bold text-wood-950 dark:text-white">{product.name}</p>
@@ -74,7 +76,7 @@ export default async function AdminProductsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="font-bold text-wood-950 dark:text-white">₹{product.price.toLocaleString('en-IN')}</span>
+                        <span className="font-bold text-wood-950 dark:text-white">₹{product.price.toNumber().toLocaleString('en-IN')}</span>
                         <span className="text-xs text-timber-500"> / {product.unit}</span>
                       </td>
                       <td className="px-6 py-4 text-right">

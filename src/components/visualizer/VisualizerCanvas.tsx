@@ -1,16 +1,36 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
+import type { StaticProduct } from '@/types/product';
+
+// --- Types ---
+interface WoodMeshProps {
+  textureUrl: string;
+  width: number;
+  height: number;
+  thickness: number;
+}
+
+interface VisualizerCanvasProps {
+  formFactor: 'sheet' | 'door' | 'log';
+  activeProduct: StaticProduct;
+  dimensions: number[];
+}
 
 // --- 3D MODELS ---
 
-function PlywoodSheet({ textureUrl, width, height, thickness }: any) {
-  const texture = useTexture(textureUrl) as any;
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(width / 4, height / 4); // Scale texture based on size
+function PlywoodSheet({ textureUrl, width, height, thickness }: WoodMeshProps) {
+  const texture = useTexture(textureUrl) as THREE.Texture;
+  const clonedTexture = useMemo(() => {
+    const t = texture.clone();
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(width / 4, height / 4);
+    t.needsUpdate = true;
+    return t;
+  }, [texture, width, height]);
 
   return (
     <mesh castShadow receiveShadow position={[0, height / 2, 0]}>
@@ -19,16 +39,21 @@ function PlywoodSheet({ textureUrl, width, height, thickness }: any) {
       <meshStandardMaterial attach="material-1" color="#5a3d24" roughness={0.9} />
       <meshStandardMaterial attach="material-2" color="#5a3d24" roughness={0.9} />
       <meshStandardMaterial attach="material-3" color="#5a3d24" roughness={0.9} />
-      <meshStandardMaterial attach="material-4" map={texture} roughness={0.8} />
-      <meshStandardMaterial attach="material-5" map={texture} roughness={0.8} />
+      <meshStandardMaterial attach="material-4" map={clonedTexture} roughness={0.8} />
+      <meshStandardMaterial attach="material-5" map={clonedTexture} roughness={0.8} />
     </mesh>
   );
 }
 
-function DoorPanel({ textureUrl, width, height, thickness }: any) {
-  const texture = useTexture(textureUrl) as any;
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(width / 4, height / 4);
+function DoorPanel({ textureUrl, width, height, thickness }: WoodMeshProps) {
+  const texture = useTexture(textureUrl) as THREE.Texture;
+  const clonedTexture = useMemo(() => {
+    const t = texture.clone();
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(width / 4, height / 4);
+    t.needsUpdate = true;
+    return t;
+  }, [texture, width, height]);
 
   return (
     <group position={[0, height / 2, 0]}>
@@ -39,8 +64,8 @@ function DoorPanel({ textureUrl, width, height, thickness }: any) {
         <meshStandardMaterial attach="material-1" color="#4a2e15" roughness={0.9} />
         <meshStandardMaterial attach="material-2" color="#4a2e15" roughness={0.9} />
         <meshStandardMaterial attach="material-3" color="#4a2e15" roughness={0.9} />
-        <meshStandardMaterial attach="material-4" map={texture} roughness={0.6} />
-        <meshStandardMaterial attach="material-5" map={texture} roughness={0.6} />
+        <meshStandardMaterial attach="material-4" map={clonedTexture} roughness={0.6} />
+        <meshStandardMaterial attach="material-5" map={clonedTexture} roughness={0.6} />
       </mesh>
       
       {/* Door Handle */}
@@ -61,26 +86,31 @@ function DoorPanel({ textureUrl, width, height, thickness }: any) {
   );
 }
 
-function TimberLog({ textureUrl, width, height, thickness }: any) {
-  const texture = useTexture(textureUrl) as any;
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(1, height / 2);
+function TimberLog({ textureUrl, width, height, thickness }: WoodMeshProps) {
+  const texture = useTexture(textureUrl) as THREE.Texture;
+  const clonedTexture = useMemo(() => {
+    const t = texture.clone();
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(1, height / 2);
+    t.needsUpdate = true;
+    return t;
+  }, [texture, height]);
 
   return (
     <mesh castShadow receiveShadow position={[0, height / 2, 0]}>
       {/* A thick rectangular log */}
       <boxGeometry args={[width, height, thickness]} />
-      <meshStandardMaterial attach="material-0" map={texture} roughness={0.9} /> {/* Side */}
-      <meshStandardMaterial attach="material-1" map={texture} roughness={0.9} /> {/* Side */}
+      <meshStandardMaterial attach="material-0" map={clonedTexture} roughness={0.9} /> {/* Side */}
+      <meshStandardMaterial attach="material-1" map={clonedTexture} roughness={0.9} /> {/* Side */}
       <meshStandardMaterial attach="material-2" color="#8b5a2b" roughness={0.9} /> {/* Top end grain */}
       <meshStandardMaterial attach="material-3" color="#8b5a2b" roughness={0.9} /> {/* Bottom end grain */}
-      <meshStandardMaterial attach="material-4" map={texture} roughness={0.9} /> {/* Front */}
-      <meshStandardMaterial attach="material-5" map={texture} roughness={0.9} /> {/* Back */}
+      <meshStandardMaterial attach="material-4" map={clonedTexture} roughness={0.9} /> {/* Front */}
+      <meshStandardMaterial attach="material-5" map={clonedTexture} roughness={0.9} /> {/* Back */}
     </mesh>
   );
 }
 
-export default function VisualizerCanvas({ formFactor, activeProduct, dimensions }: any) {
+export default function VisualizerCanvas({ formFactor, activeProduct, dimensions }: VisualizerCanvasProps) {
   return (
     <Canvas shadows camera={{ position: [3, 2, 4], fov: 45 }}>
       <color attach="background" args={['#131613']} />

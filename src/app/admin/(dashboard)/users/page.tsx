@@ -1,37 +1,10 @@
-import { prisma } from '@/lib/prisma';
+import { getCustomerProfiles } from '@/services/productService';
 import { Mail, Phone, MapPin, User as UserIcon, TrendingUp, Package } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminUsersPage() {
-  // Aggregate orders by customer to create "Customer Profiles"
-  const orders = await prisma.order.findMany({
-    orderBy: { createdAt: 'desc' }
-  });
-
-  const customersMap = new Map();
-  
-  orders.forEach(order => {
-    const key = order.email || order.phone || order.id; // Fallback to order ID if no contact info
-    if (!customersMap.has(key)) {
-      customersMap.set(key, {
-        id: key,
-        name: order.customerName || 'Guest Customer',
-        email: order.email || 'N/A',
-        phone: order.phone || 'N/A',
-        location: order.city ? `${order.city}, ${order.zipCode}` : 'N/A',
-        totalOrders: 0,
-        totalSpend: 0,
-        lastOrderDate: order.createdAt,
-      });
-    }
-    
-    const customer = customersMap.get(key);
-    customer.totalOrders += 1;
-    customer.totalSpend += order.total;
-  });
-
-  const customers = Array.from(customersMap.values());
+  const customers = await getCustomerProfiles();
 
   return (
     <>

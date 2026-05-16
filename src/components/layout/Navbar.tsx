@@ -6,6 +6,7 @@ import { Menu, X, ShoppingCart, Phone, Truck } from 'lucide-react';
 import Image from 'next/image';
 import { useCart } from '@/components/cart/CartContext';
 import { AnimatePresence, motion } from 'framer-motion';
+import ProfileWidget from '@/components/profile/ProfileWidget';
 
 const navLinks = [
   { href: '/', label: 'Home' },
@@ -26,8 +27,9 @@ export default function Navbar() {
       <nav className="fixed w-full z-50 bg-white border-b border-wood-200 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
-            {/* Logo */}
-            <div className="flex-shrink-0 flex items-center">
+            {/* Logo & Profile */}
+            <div className="flex-shrink-0 flex items-center gap-4">
+              <ProfileWidget />
               <Link href="/" className="flex items-center gap-3">
                 <div className="relative w-12 h-12 md:w-16 md:h-16 flex-shrink-0">
                   <Image src="/logo.jpg" alt="JK Timber Logo" fill sizes="64px" className="object-contain rounded-full bg-white" />

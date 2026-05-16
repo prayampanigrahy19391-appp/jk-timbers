@@ -1,26 +1,12 @@
-import { prisma } from '@/lib/prisma';
+import { getAdminDashboardData } from '@/services/orderService';
 import { ShoppingCart, TrendingUp, AlertTriangle, Users, CheckCircle2 } from 'lucide-react';
 import AdminTodoCheckbox from './AdminTodoCheckbox';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboard() {
-  const [ordersCount, pendingOrdersCount, totalRevenue, lowStockProducts, usersCount, recentOrders] = await Promise.all([
-    prisma.order.count(),
-    prisma.order.count({ where: { status: 'PENDING' } }),
-    prisma.order.aggregate({
-      _sum: { total: true },
-      where: { paymentStatus: 'PAID' }
-    }),
-    prisma.product.count({ where: { stock: { lt: 10 } } }),
-    prisma.user.count(),
-    prisma.order.findMany({
-      where: { status: 'PENDING' },
-      orderBy: { createdAt: 'desc' }
-    })
-  ]);
-
-  const revenue = totalRevenue._sum.total || 0;
+  const dashboardData = await getAdminDashboardData();
+  const { pendingOrdersCount, revenue, lowStockProducts, usersCount, recentOrders } = dashboardData;
 
   return (
     <>
@@ -46,7 +32,7 @@ export default async function AdminDashboard() {
           </div>
           <div>
             <p className="text-sm text-timber-500 font-medium">Paid Revenue</p>
-            <p className="text-2xl font-bold text-wood-950 dark:text-white">₹{revenue.toLocaleString('en-IN')}</p>
+            <p className="text-2xl font-bold text-wood-950 dark:text-white">₹{(revenue || 0).toLocaleString('en-IN')}</p>
           </div>
         </div>
         <div className="bg-white dark:bg-timber-900 p-6 rounded-2xl border border-wood-100 dark:border-timber-800 shadow-sm flex items-center gap-4">
@@ -98,7 +84,7 @@ export default async function AdminDashboard() {
                       <p className="text-sm text-timber-500 font-mono">{order.id} • {new Date(order.createdAt).toLocaleDateString()}</p>
                     </div>
                     <span className="text-lg font-black text-wood-950 dark:text-white">
-                      ₹{order.total.toLocaleString('en-IN')}
+                      ₹{order.total.toNumber().toLocaleString('en-IN')}
                     </span>
                   </div>
                   <div className="text-sm text-timber-600 dark:text-timber-400 bg-wood-50 dark:bg-timber-950 p-3 rounded-lg border border-wood-100 dark:border-timber-800">

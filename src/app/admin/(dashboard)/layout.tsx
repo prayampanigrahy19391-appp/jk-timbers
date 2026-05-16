@@ -1,41 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React from 'react';
 import { Package, ShoppingCart, Users, TrendingUp, Menu, Search, Bell, LogOut } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const pathname = usePathname();
-  const router = useRouter();
 
-  useEffect(() => {
-    const auth = sessionStorage.getItem('jk-admin-auth');
-    if (auth === 'true') {
-      setIsAuthenticated(true);
-    } else {
-      router.push('/admin/login');
-    }
-    setIsLoading(false);
-  }, [router]);
-
-
-
-  const handleLogout = () => {
-    sessionStorage.removeItem('jk-admin-auth');
-    setIsAuthenticated(false);
-    router.push('/admin/login');
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/admin/login' });
   };
-
-  if (isLoading) {
-    return <div className="min-h-screen bg-wood-950 flex items-center justify-center text-accent">Loading...</div>;
-  }
-
-  if (!isAuthenticated) {
-    return null; // Will redirect via useEffect
-  }
 
   const navLinks = [
     { href: '/admin', label: 'Dashboard', icon: TrendingUp },

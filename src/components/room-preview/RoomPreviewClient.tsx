@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { Upload, Camera, Download, Layers } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
 
 const presetRooms = [
   { id: 'living', name: 'Living Room', url: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?q=80&w=1024' },
@@ -77,10 +76,10 @@ export function RoomPreviewClient() {
               </div>
             </div>
             
-            <Button variant="dark" className="w-full shadow-lg hover:shadow-xl" size="lg">
+            <button className="w-full shadow-lg hover:shadow-xl bg-wood-950 text-white hover:bg-wood-800 transition-colors py-3 px-6 rounded-xl flex items-center justify-center gap-2 font-medium text-lg">
               <Download size={20} />
               Save Design
-            </Button>
+            </button>
           </div>
 
           {/* Preview Area */}

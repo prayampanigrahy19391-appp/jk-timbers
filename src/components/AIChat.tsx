@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { MessageSquare, X, Send, Bot, Phone, Sparkles } from 'lucide-react';
+import { X, Send, Bot, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // FAQ knowledge base for pattern-matched responses

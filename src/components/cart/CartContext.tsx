@@ -1,16 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
-import { parsePrice } from '@/lib/prisma';
-
-export interface CartItem {
-  id: string;
-  name: string;
-  price: string;
-  unit: string;
-  image: string;
-  quantity: number;
-}
+import { parsePrice } from '@/utils/price';
+import type { CartItem } from '@/types/product';
 
 interface CartContextType {
   items: CartItem[];
@@ -36,6 +28,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const savedCart = localStorage.getItem('jk-timbers-cart');
     if (savedCart) {
       try {
+        // eslint-disable-next-line
         setItems(JSON.parse(savedCart));
       } catch (e) {
         console.error('Failed to parse cart', e);

@@ -4,17 +4,17 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Filter, Search, ChevronDown, ShoppingCart } from 'lucide-react';
-import { products as mockProducts } from '@/data/products';
 import { useCart } from '@/components/cart/CartContext';
+import type { StaticProduct } from '@/types/product';
 
 const categories = ['All', 'Timber', 'Plywood', 'Engineered', 'Veneers', 'Laminates', 'Doors'];
 
-export function CatalogGrid() {
+export function CatalogGrid({ products }: { products: StaticProduct[] }) {
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const { addToCart } = useCart();
 
-  const filteredProducts = mockProducts.filter(p => 
+  const filteredProducts = products.filter(p => 
     (activeCategory === 'All' || p.category === activeCategory) &&
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
