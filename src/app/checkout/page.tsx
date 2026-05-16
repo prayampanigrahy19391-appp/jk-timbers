@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useCart } from '@/components/cart/CartContext';
 import { ShieldCheck, Truck, ArrowRight, ArrowLeft } from 'lucide-react';
+import { parsePrice } from '@/lib/prisma';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -85,7 +86,7 @@ export default function CheckoutPage() {
           
           {/* Left Column: Form */}
           <div className="w-full lg:w-2/3">
-            <form onSubmit={handleSubmit} className="bg-white dark:bg-timber-900 rounded-3xl p-8 border border-wood-100 dark:border-timber-800 shadow-sm mb-8">
+            <form id="checkout-form" onSubmit={handleSubmit} className="bg-white dark:bg-timber-900 rounded-3xl p-8 border border-wood-100 dark:border-timber-800 shadow-sm mb-8">
               <h2 className="text-2xl font-bold text-wood-950 dark:text-white mb-6 border-b border-wood-100 dark:border-timber-800 pb-4">Customer Details</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -134,9 +135,7 @@ export default function CheckoutPage() {
                     <span className="text-timber-700 dark:text-timber-300">
                       {item.quantity}x {item.name}
                     </span>
-                    <span className="font-bold text-wood-950 dark:text-white">
-                      ₹{(parseFloat(item.price.replace(/[^0-9.]/g, '')) * item.quantity).toLocaleString('en-IN')}
-                    </span>
+                      ₹{(parsePrice(item.price) * item.quantity).toLocaleString('en-IN')}
                   </li>
                 ))}
               </ul>
@@ -159,7 +158,8 @@ export default function CheckoutPage() {
               </div>
 
               <button 
-                onClick={handleSubmit}
+                type="submit"
+                form="checkout-form"
                 disabled={isSubmitting}
                 className="w-full bg-wood-950 hover:bg-wood-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-lg shadow-lg"
               >

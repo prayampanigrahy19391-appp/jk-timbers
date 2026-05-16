@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import { parsePrice } from '@/lib/prisma';
 
 export interface CartItem {
   id: string;
@@ -86,13 +87,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('jk-timbers-cart');
   };
 
-  const cartTotal = items.reduce((total, item) => {
-    // Extract numbers from price string (e.g. "₹4,500" -> 4500)
-    const priceNum = parseFloat(item.price.replace(/[^0-9.]/g, ''));
-    return total + (priceNum * item.quantity);
-  }, 0);
+  const cartTotal = useMemo(() => items.reduce((total, item) => {
+    return total + (parsePrice(item.price) * item.quantity);
+  }, 0), [items]);
 
-  const itemCount = items.reduce((count, item) => count + item.quantity, 0);
+  const itemCount = useMemo(() => items.reduce((count, item) => count + item.quantity, 0), [items]);
 
   return (
     <CartContext.Provider

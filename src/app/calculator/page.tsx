@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Calculator, HardHat, Package, Receipt } from 'lucide-react';
+import { Calculator, HardHat, Package, Receipt, CheckCircle } from 'lucide-react';
 import { products } from '@/data/products';
+import { parsePrice } from '@/lib/prisma';
 
 export default function CalculatorPage() {
   const [activeTab, setActiveTab] = useState<'sqft' | 'cuft' | 'doors'>('sqft');
-  
-  // Helpers
-  const parsePrice = (priceStr: string) => Number(priceStr.replace(/[^0-9.-]+/g, ""));
+  const [saved, setSaved] = useState(false);
   
   // Categorized Products
   const sheetProducts = products.filter(p => ['Plywood', 'Engineered', 'Laminates', 'Veneers'].includes(p.category));
@@ -347,8 +346,24 @@ export default function CalculatorPage() {
                   </div>
                 )}
 
-                <button className="w-full mt-8 bg-timber-800 hover:bg-timber-700 text-white font-bold py-3 rounded-xl transition-colors text-sm border border-timber-700">
-                  Save Estimate
+                <button 
+                  onClick={() => {
+                    const estimate = {
+                      type: activeTab,
+                      total: activeTab === 'sqft' ? sqFtResult.total : activeTab === 'cuft' ? cuFtResult.total : doorResult.total,
+                      materialCost: activeTab === 'sqft' ? sqFtResult.materialCost : activeTab === 'cuft' ? cuFtResult.materialCost : doorResult.materialCost,
+                      labourCost: activeTab === 'sqft' ? sqFtResult.labourCost : activeTab === 'cuft' ? cuFtResult.labourCost : doorResult.labourCost,
+                      savedAt: new Date().toISOString(),
+                    };
+                    const existing = JSON.parse(localStorage.getItem('jk-estimates') || '[]');
+                    existing.push(estimate);
+                    localStorage.setItem('jk-estimates', JSON.stringify(existing));
+                    setSaved(true);
+                    setTimeout(() => setSaved(false), 2500);
+                  }}
+                  className="w-full mt-8 bg-timber-800 hover:bg-timber-700 text-white font-bold py-3 rounded-xl transition-colors text-sm border border-timber-700 flex items-center justify-center gap-2"
+                >
+                  {saved ? <><CheckCircle size={16} /> Saved!</> : 'Save Estimate'}
                 </button>
               </div>
             </div>

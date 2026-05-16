@@ -1,10 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { ShoppingCart, TrendingUp, AlertTriangle, Users, CheckCircle2 } from 'lucide-react';
 import AdminTodoCheckbox from './AdminTodoCheckbox';
 
 export const dynamic = 'force-dynamic';
-
-const prisma = new PrismaClient();
 
 export default async function AdminDashboard() {
   const [ordersCount, pendingOrdersCount, totalRevenue, lowStockProducts, usersCount, recentOrders] = await Promise.all([

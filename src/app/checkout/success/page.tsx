@@ -32,7 +32,7 @@ function SuccessContent() {
 
       <div className="flex justify-center mt-8">
         <Link 
-          href="/delivery"
+          href="/track"
           className="bg-wood-950 hover:bg-wood-800 text-white font-bold py-4 px-12 rounded-xl transition-colors flex items-center justify-center gap-2 text-lg"
         >
           <Truck size={20} /> Track Delivery

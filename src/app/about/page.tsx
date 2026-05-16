@@ -1,8 +1,6 @@
-'use client';
-
 import Image from 'next/image';
 import { ShieldCheck, Trophy, Users, CheckCircle, Leaf, Globe2, Hammer } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { MotionDiv } from '@/components/ui/MotionDiv';
 
 export default function AboutPage() {
   return (
@@ -10,7 +8,7 @@ export default function AboutPage() {
       
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32 text-center relative">
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8 }}
@@ -25,13 +23,13 @@ export default function AboutPage() {
           <p className="text-xl md:text-2xl text-timber-600 dark:text-timber-400 max-w-3xl mx-auto leading-relaxed font-medium">
             Rooted in tradition, built on trust. JK Timber has been the cornerstone of quality woodworking in Odisha for over two decades.
           </p>
-        </motion.div>
+        </MotionDiv>
       </section>
 
       {/* Story Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <motion.div 
+          <MotionDiv 
             initial={{ opacity: 0, x: -50 }}
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
@@ -42,12 +40,13 @@ export default function AboutPage() {
               src="https://images.unsplash.com/photo-1610448721566-47369c768e70?q=80&w=1024" 
               alt="Timber Crafting" 
               fill 
+              sizes="(max-width: 1024px) 100vw, 50vw"
               className="object-cover"
             />
             <div className="absolute inset-0 bg-timber-950/20 hover:bg-transparent transition-colors duration-700"></div>
-          </motion.div>
+          </MotionDiv>
           
-          <motion.div
+          <MotionDiv
             initial={{ opacity: 0, x: 50 }}
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
@@ -95,35 +94,35 @@ export default function AboutPage() {
                 <span className="font-bold text-wood-900 dark:text-wood-100">Global Standards</span>
               </div>
             </div>
-          </motion.div>
+          </MotionDiv>
         </div>
       </section>
 
       {/* Stats Section */}
       <section className="bg-wood-950 py-24 text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/textures/teak.png')] opacity-10 mix-blend-overlay"></div>
+        <div className="absolute inset-0 bg-[url('/textures/teak.webp')] opacity-10 mix-blend-overlay"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-12 text-center">
-            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }}>
+            <MotionDiv initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }}>
               <Trophy className="mx-auto text-accent mb-6" size={48} />
               <h3 className="text-5xl font-black mb-2 font-serif text-accent drop-shadow-md">24+</h3>
               <p className="text-wood-300 font-medium uppercase tracking-widest text-sm">Years of Excellence</p>
-            </motion.div>
-            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} viewport={{ once: true }}>
+            </MotionDiv>
+            <MotionDiv initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} viewport={{ once: true }}>
               <Users className="mx-auto text-accent mb-6" size={48} />
               <h3 className="text-5xl font-black mb-2 font-serif text-accent drop-shadow-md">10k+</h3>
               <p className="text-wood-300 font-medium uppercase tracking-widest text-sm">Happy Clients</p>
-            </motion.div>
-            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} viewport={{ once: true }}>
+            </MotionDiv>
+            <MotionDiv initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} viewport={{ once: true }}>
               <ShieldCheck className="mx-auto text-accent mb-6" size={48} />
               <h3 className="text-5xl font-black mb-2 font-serif text-accent drop-shadow-md">500+</h3>
               <p className="text-wood-300 font-medium uppercase tracking-widest text-sm">Partner Contractors</p>
-            </motion.div>
-            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }} viewport={{ once: true }}>
+            </MotionDiv>
+            <MotionDiv initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }} viewport={{ once: true }}>
               <Image src="/logo.jpg" alt="JK Timber" width={48} height={48} className="mx-auto mb-6 rounded-full shadow-[0_0_15px_rgba(212,175,55,0.5)] bg-white" />
               <h3 className="text-5xl font-black mb-2 font-serif text-accent drop-shadow-md">1</h3>
               <p className="text-wood-300 font-medium uppercase tracking-widest text-sm">Trusted Name</p>
-            </motion.div>
+            </MotionDiv>
           </div>
         </div>
       </section>

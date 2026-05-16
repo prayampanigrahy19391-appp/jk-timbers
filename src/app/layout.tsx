@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import dynamic from 'next/dynamic';
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import AIChat from "@/components/AIChat";
 import { CartProvider } from "@/components/cart/CartContext";
 import CartSidebar from "@/components/cart/CartSidebar";
+
+const AIChat = dynamic(() => import('@/components/AIChat'));
 
 const inter = Inter({
   variable: "--font-inter",

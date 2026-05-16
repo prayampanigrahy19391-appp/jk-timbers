@@ -11,7 +11,7 @@ export default function Footer() {
           <div className="space-y-6">
             <div className="flex flex-col items-start gap-4">
               <div className="relative w-32 h-32 bg-white rounded-xl p-2 shadow-lg">
-                <Image src="/logo.jpg" alt="JK Timber Logo" fill className="object-contain" />
+                <Image src="/logo.jpg" alt="JK Timber Logo" fill sizes="128px" className="object-contain" />
               </div>
               <h3 className="font-serif text-3xl font-bold text-accent tracking-tight">JK TIMBER</h3>
             </div>
@@ -43,7 +43,7 @@ export default function Footer() {
               <li><Link href="/catalog" className="text-timber-300 hover:text-accent transition-colors flex items-center before:content-['›'] before:mr-2 before:text-wood-600">Sagwan (Teak) Wood</Link></li>
               <li><Link href="/catalog" className="text-timber-300 hover:text-accent transition-colors flex items-center before:content-['›'] before:mr-2 before:text-wood-600">Decorative Laminates</Link></li>
               <li><Link href="/visualizer" className="text-timber-300 hover:text-accent transition-colors flex items-center before:content-['›'] before:mr-2 before:text-wood-600">3D Wood Visualizer</Link></li>
-              <li><Link href="/market" className="text-timber-300 hover:text-accent transition-colors flex items-center before:content-['›'] before:mr-2 before:text-wood-600">Live Market Prices</Link></li>
+              <li><Link href="/calculator" className="text-timber-300 hover:text-accent transition-colors flex items-center before:content-['›'] before:mr-2 before:text-wood-600">Smart Calculator</Link></li>
             </ul>
           </div>
 
@@ -56,7 +56,7 @@ export default function Footer() {
             <ul className="space-y-3">
               <li><Link href="/calculator" className="text-timber-300 hover:text-accent transition-colors flex items-center before:content-['›'] before:mr-2 before:text-wood-600">Smart Wood Calculator</Link></li>
               <li><Link href="/contractors" className="text-timber-300 hover:text-accent transition-colors flex items-center before:content-['›'] before:mr-2 before:text-wood-600">Contractor Portal</Link></li>
-              <li><Link href="/delivery" className="text-timber-300 hover:text-accent transition-colors flex items-center before:content-['›'] before:mr-2 before:text-wood-600">Delivery Tracking</Link></li>
+              <li><Link href="/track" className="text-timber-300 hover:text-accent transition-colors flex items-center before:content-['›'] before:mr-2 before:text-wood-600">Order Tracking</Link></li>
               <li><Link href="/showroom" className="text-timber-300 hover:text-accent transition-colors flex items-center before:content-['›'] before:mr-2 before:text-wood-600">Virtual Showroom</Link></li>
               <li><Link href="/contact" className="text-timber-300 hover:text-accent transition-colors flex items-center before:content-['›'] before:mr-2 before:text-wood-600">Request Callback</Link></li>
             </ul>
@@ -90,9 +90,9 @@ export default function Footer() {
             &copy; {new Date().getFullYear()} JK Timbers. All rights reserved.
           </p>
           <div className="flex space-x-6 text-sm text-timber-400">
-            <Link href="/privacy" className="hover:text-accent transition-colors">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-accent transition-colors">Terms of Service</Link>
-            <Link href="/sitemap" className="hover:text-accent transition-colors">Sitemap</Link>
+            <Link href="/about" className="hover:text-accent transition-colors">About Us</Link>
+            <Link href="/contact" className="hover:text-accent transition-colors">Contact</Link>
+            <Link href="/catalog" className="hover:text-accent transition-colors">Products</Link>
           </div>
         </div>
       </div>

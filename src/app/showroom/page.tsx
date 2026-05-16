@@ -31,6 +31,7 @@ export default function ShowroomPage() {
                     src={wood.image} 
                     alt={wood.name} 
                     fill 
+                    sizes="(max-width: 1024px) 100vw, 50vw"
                     className="object-cover transition-transform duration-700 hover:scale-110"
                   />
                 </div>
@@ -71,7 +72,7 @@ export default function ShowroomPage() {
       {/* Interactive CTA */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-32">
         <div className="bg-wood-950 rounded-3xl p-12 text-center text-white relative overflow-hidden">
-          <div className="absolute inset-0 bg-[url('/textures/walnut.png')] opacity-20 mix-blend-overlay"></div>
+          <div className="absolute inset-0 bg-[url('/textures/walnut.webp')] opacity-20 mix-blend-overlay"></div>
           <div className="relative z-10">
             <h2 className="text-3xl md:text-5xl font-serif font-bold mb-6">Want to see it in your room?</h2>
             <p className="text-xl text-wood-300 mb-10 max-w-2xl mx-auto">

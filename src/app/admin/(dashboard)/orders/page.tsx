@@ -1,10 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { Mail, Phone, MapPin, ShoppingCart } from 'lucide-react';
 import UpdateStatusButton from './UpdateStatusButton';
 
 export const dynamic = 'force-dynamic';
-
-const prisma = new PrismaClient();
 
 export default async function AdminOrdersPage() {
   const orders = await prisma.order.findMany({

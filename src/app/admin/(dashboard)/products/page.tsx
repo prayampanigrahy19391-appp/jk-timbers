@@ -1,10 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { Package, Plus } from 'lucide-react';
 import Image from 'next/image';
 
 export const dynamic = 'force-dynamic';
-
-const prisma = new PrismaClient();
 
 export default async function AdminProductsPage() {
   const products = await prisma.product.findMany({

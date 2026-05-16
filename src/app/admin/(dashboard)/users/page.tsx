@@ -1,9 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { Mail, Phone, MapPin, User as UserIcon, TrendingUp, Package } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
-
-const prisma = new PrismaClient();
 
 export default async function AdminUsersPage() {
   // Aggregate orders by customer to create "Customer Profiles"

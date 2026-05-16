@@ -1,9 +1,7 @@
-import { PrismaClient } from '@prisma/client';
-import { NextResponse } from 'next/response';
+import { prisma } from '@/lib/prisma';
+import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-
-const prisma = new PrismaClient();
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

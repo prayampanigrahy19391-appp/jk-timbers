@@ -1,20 +1,17 @@
-'use client';
-
-import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowRight, ShieldCheck, Truck, Trophy, Users, Star, Phone, ShoppingCart } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Truck, Trophy, Users, Star, Phone } from 'lucide-react';
 import Image from 'next/image';
-import { useCart } from '@/components/cart/CartContext';
+import { MotionDiv } from '@/components/ui/MotionDiv';
+import { HeroCartButton } from '@/components/home/HeroCartButton';
 
 const categories = [
-  { name: 'Sagwan (Teak) Wood', image: '/textures/teak.png', delay: 0.1 },
-  { name: 'Premium Plywood', image: '/textures/marine_plywood.png', delay: 0.2 },
-  { name: 'Decorative Laminates', image: '/textures/laminate.png', delay: 0.3 },
-  { name: 'Interior Veneers', image: '/textures/walnut.png', delay: 0.4 },
+  { name: 'Sagwan (Teak) Wood', image: '/textures/teak.webp', delay: 0.1 },
+  { name: 'Premium Plywood', image: '/textures/marine_plywood.webp', delay: 0.2 },
+  { name: 'Decorative Laminates', image: '/textures/laminate.webp', delay: 0.3 },
+  { name: 'Interior Veneers', image: '/textures/walnut.webp', delay: 0.4 },
 ];
 
 export default function Home() {
-  const { toggleCart } = useCart();
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -22,9 +19,10 @@ export default function Home() {
       <section className="relative min-h-[85vh] flex items-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <Image
-            src="/hero_bg.png"
+            src="/hero_bg.webp"
             alt="Premium Timber Background"
             fill
+            sizes="100vw"
             className="object-cover object-center"
             priority
           />
@@ -32,7 +30,7 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 px-4 sm:px-6 lg:px-12 max-w-7xl w-full mx-auto mt-20">
-          <motion.div
+          <MotionDiv
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
@@ -64,14 +62,12 @@ export default function Home() {
 
             {/* Quick Actions */}
             <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto mt-6 pt-6 border-t border-[#7a5938]/30">
-              <button onClick={toggleCart} className="w-full sm:w-auto px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 backdrop-blur-sm">
-                <ShoppingCart size={16} /> View Cart
-              </button>
-              <Link href="/delivery" className="w-full sm:w-auto px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 backdrop-blur-sm">
+              <HeroCartButton />
+              <Link href="/track" className="w-full sm:w-auto px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 backdrop-blur-sm">
                 <Truck size={16} /> Track Order
               </Link>
             </div>
-          </motion.div>
+          </MotionDiv>
         </div>
       </section>
 
@@ -118,7 +114,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {categories.map((category, index) => (
               <Link href="/catalog" key={category.name}>
-                <motion.div 
+                <MotionDiv 
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ delay: category.delay, duration: 0.6 }}
@@ -129,6 +125,7 @@ export default function Home() {
                     src={category.image} 
                     alt={category.name}
                     fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
                     className="object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-timber-950/90 via-timber-950/20 to-transparent" />
@@ -139,7 +136,7 @@ export default function Home() {
                       <ArrowRight size={16} className="transform group-hover:translate-x-2 transition-transform" />
                     </div>
                   </div>
-                </motion.div>
+                </MotionDiv>
               </Link>
             ))}
           </div>

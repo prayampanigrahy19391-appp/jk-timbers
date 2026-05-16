@@ -74,6 +74,7 @@ export default function TrackOrderPage() {
               className="p-8 bg-wood-50/50 dark:bg-timber-950/50"
             >
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div>
                   <h3 className="text-xl font-bold text-wood-950 dark:text-white mb-1">Order Details</h3>
                   <div className="flex items-center gap-3">
                     <p className="text-timber-500 text-sm font-mono">ID: {orderData.id}</p>

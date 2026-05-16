@@ -1,9 +1,38 @@
 'use client';
 
-import { Building2, ShieldCheck, FileText, ArrowRight, Package } from 'lucide-react';
-import Link from 'next/link';
+import { useState } from 'react';
+import { Building2, ShieldCheck, FileText, ArrowRight, Package, CheckCircle } from 'lucide-react';
 
 export default function ContractorsPortal() {
+  const [formData, setFormData] = useState({ firstName: '', lastName: '', company: '', gstNumber: '', email: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setResult(null);
+
+    try {
+      const res = await fetch('/api/contractors/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const data = await res.json();
+      setResult({ success: data.success, message: data.message || data.error });
+      if (data.success) setFormData({ firstName: '', lastName: '', company: '', gstNumber: '', email: '' });
+    } catch {
+      setResult({ success: false, message: 'Network error. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="bg-wood-50 dark:bg-timber-950 min-h-screen py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -38,7 +67,7 @@ export default function ContractorsPortal() {
           </div>
         </div>
 
-        {/* Login / Registration Area */}
+        {/* Registration Area */}
         <div className="bg-wood-950 rounded-3xl overflow-hidden shadow-2xl">
           <div className="grid grid-cols-1 lg:grid-cols-2">
             
@@ -46,23 +75,30 @@ export default function ContractorsPortal() {
               <h2 className="text-3xl font-serif font-bold text-white mb-4">Partner With Us</h2>
               <p className="text-wood-300 mb-8">Join our network of over 500+ trusted contractors and builders across India.</p>
               
-              <form className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <input type="text" placeholder="First Name" className="w-full p-4 rounded-xl bg-wood-900 border border-wood-800 text-white placeholder-wood-500 focus:outline-none focus:border-accent" />
-                  <input type="text" placeholder="Last Name" className="w-full p-4 rounded-xl bg-wood-900 border border-wood-800 text-white placeholder-wood-500 focus:outline-none focus:border-accent" />
+              {result && (
+                <div className={`mb-6 p-4 rounded-xl border text-sm font-medium ${
+                  result.success
+                    ? 'bg-green-900/20 border-green-800 text-green-400'
+                    : 'bg-red-900/20 border-red-800 text-red-400'
+                }`}>
+                  {result.success && <CheckCircle className="inline mr-2" size={16} />}
+                  {result.message}
                 </div>
-                <input type="text" placeholder="Company Name" className="w-full p-4 rounded-xl bg-wood-900 border border-wood-800 text-white placeholder-wood-500 focus:outline-none focus:border-accent" />
-                <input type="text" placeholder="GST Number" className="w-full p-4 rounded-xl bg-wood-900 border border-wood-800 text-white placeholder-wood-500 focus:outline-none focus:border-accent" />
-                <input type="email" placeholder="Email Address" className="w-full p-4 rounded-xl bg-wood-900 border border-wood-800 text-white placeholder-wood-500 focus:outline-none focus:border-accent" />
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <input type="text" name="firstName" required placeholder="First Name *" value={formData.firstName} onChange={handleChange} className="w-full p-4 rounded-xl bg-wood-900 border border-wood-800 text-white placeholder-wood-500 focus:outline-none focus:border-accent" />
+                  <input type="text" name="lastName" placeholder="Last Name" value={formData.lastName} onChange={handleChange} className="w-full p-4 rounded-xl bg-wood-900 border border-wood-800 text-white placeholder-wood-500 focus:outline-none focus:border-accent" />
+                </div>
+                <input type="text" name="company" placeholder="Company Name" value={formData.company} onChange={handleChange} className="w-full p-4 rounded-xl bg-wood-900 border border-wood-800 text-white placeholder-wood-500 focus:outline-none focus:border-accent" />
+                <input type="text" name="gstNumber" placeholder="GST Number" value={formData.gstNumber} onChange={handleChange} className="w-full p-4 rounded-xl bg-wood-900 border border-wood-800 text-white placeholder-wood-500 focus:outline-none focus:border-accent" />
+                <input type="email" name="email" required placeholder="Email Address *" value={formData.email} onChange={handleChange} className="w-full p-4 rounded-xl bg-wood-900 border border-wood-800 text-white placeholder-wood-500 focus:outline-none focus:border-accent" />
                 
-                <button className="w-full bg-accent hover:bg-yellow-500 text-wood-950 font-bold py-4 rounded-xl transition-colors mt-4 flex items-center justify-center gap-2">
-                  Apply for Partner Account <ArrowRight size={20} />
+                <button type="submit" disabled={isSubmitting} className="w-full bg-accent hover:bg-yellow-500 disabled:opacity-50 text-wood-950 font-bold py-4 rounded-xl transition-colors mt-4 flex items-center justify-center gap-2">
+                  {isSubmitting ? 'Submitting...' : 'Apply for Partner Account'} <ArrowRight size={20} />
                 </button>
               </form>
-              
-              <div className="mt-8 text-center text-wood-400">
-                Already have an account? <Link href="/login" className="text-accent hover:underline font-medium">Log in here</Link>
-              </div>
             </div>
 
             <div className="relative hidden lg:block bg-timber-900">
