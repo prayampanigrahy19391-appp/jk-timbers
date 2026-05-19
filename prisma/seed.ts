@@ -8,7 +8,13 @@ async function main() {
 
   // 1. Create Default Admin
   const adminEmail = 'admin@jktimbers.com';
-  const hashedPassword = await bcrypt.hash('jk-timber-admin-2024-secure', 12);
+  const adminSeedPassword = process.env.ADMIN_SEED_PASSWORD;
+
+  if (!adminSeedPassword || adminSeedPassword.length < 12) {
+    throw new Error('ADMIN_SEED_PASSWORD must be set to at least 12 characters before seeding the admin user.');
+  }
+
+  const hashedPassword = await bcrypt.hash(adminSeedPassword, 12);
   
   await prisma.user.upsert({
     where: { email: adminEmail },
@@ -43,6 +49,17 @@ async function main() {
     });
   }
   console.log(`✅ Seeded ${categoriesData.length} categories.`);
+
+  await prisma.warehouse.upsert({
+    where: { code: 'MAIN' },
+    update: { isActive: true },
+    create: {
+      name: 'Main Timber Yard',
+      code: 'MAIN',
+      address: 'Primary JK Timbers warehouse',
+    },
+  });
+  console.log('✅ Seeded default warehouse.');
 
   // 3. Create Products
   // This replaces the static data/products.ts file
@@ -180,22 +197,27 @@ async function main() {
   ];
 
   for (const prod of productsData) {
-    const category = await prisma.category.findUnique({ where: { slug: prod.categorySlug } });
+    const { categorySlug, price, ...productData } = prod;
+    const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
     if (!category) {
-      console.warn(`⚠️ Category ${prod.categorySlug} not found for product ${prod.slug}`);
+      console.warn(`⚠️ Category ${categorySlug} not found for product ${prod.slug}`);
       continue;
     }
 
-    const { categorySlug, ...productData } = prod;
+    const sku = `JK-${prod.slug.toUpperCase().replace(/[^A-Z0-9]+/g, '-')}`;
 
     await prisma.product.upsert({
       where: { slug: prod.slug },
       update: {
         ...productData,
+        sku,
+        basePrice: price,
         categoryId: category.id,
       },
       create: {
         ...productData,
+        sku,
+        basePrice: price,
         categoryId: category.id,
       },
     });

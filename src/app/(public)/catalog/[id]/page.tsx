@@ -1,16 +1,11 @@
-import { getCatalogProducts, getCatalogProductById } from '@/repositories/catalogRepository';
+import { getCatalogProductById } from '@/repositories/catalogRepository';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle, Package, Truck, ShieldCheck } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import AddToCartButton from './AddToCartButton';
 
-export async function generateStaticParams() {
-  const products = await getCatalogProducts();
-  return products.map((product) => ({
-    id: product.id,
-  }));
-}
+export const dynamic = 'force-dynamic';
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;

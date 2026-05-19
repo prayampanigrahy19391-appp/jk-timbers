@@ -1,4 +1,4 @@
-export const ORDER_STATUSES = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED'] as const;
+export const ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED', 'COMPLETED', 'CANCELLED', 'REFUNDED'] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 export const PAYMENT_STATUSES = ['UNPAID', 'PENDING', 'PAID'] as const;
@@ -7,6 +7,7 @@ export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 /** Lightweight order summary returned by the tracking API. */
 export interface OrderSummary {
   id: string;
+  orderNumber?: string;
   status: string;
   customerName: string | null;
   createdAt: Date;

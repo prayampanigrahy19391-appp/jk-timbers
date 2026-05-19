@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export default function CheckoutPage() {
-  const { items, cartTotal, clearCart } = useCart();
+  const { items, cartTotal, clearCart, cartToken } = useCart();
   const router = useRouter();
   
   const [formData, setFormData] = useState({
@@ -21,7 +21,18 @@ export default function CheckoutPage() {
   });
   
   const [paymentMethod, setPaymentMethod] = useState('COD');
+  const [paymentProvider, setPaymentProvider] = useState('UPI');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+
+  const providerOptions = [
+    { value: 'UPI', label: 'Generic UPI' },
+    { value: 'PHONEPE', label: 'PhonePe' },
+    { value: 'GOOGLE_PAY', label: 'Google Pay' },
+    { value: 'PAYTM', label: 'Paytm UPI' },
+    { value: 'BHIM', label: 'BHIM UPI' },
+    { value: 'RAZORPAY', label: 'Razorpay (UPI & cards)' },
+  ];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -32,15 +43,36 @@ export default function CheckoutPage() {
     if (items.length === 0) return;
     
     setIsSubmitting(true);
+    setSubmitError('');
     
     try {
+      let activeCartToken = cartToken;
+
+      if (!activeCartToken) {
+        const cartResponse = await fetch('/api/cart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: items.map((item) => ({ sku: item.id, quantity: item.quantity })),
+          }),
+        });
+
+        if (!cartResponse.ok) {
+          throw new Error('Unable to validate your cart. Please refresh and try again.');
+        }
+
+        const cartData = await cartResponse.json();
+        activeCartToken = cartData?.cart?.token;
+      }
+
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items,
+          cartToken: activeCartToken,
           customer: formData,
           paymentMethod,
+          paymentProvider: paymentMethod === 'COD' ? undefined : paymentProvider,
           total: cartTotal
         })
       });
@@ -51,13 +83,12 @@ export default function CheckoutPage() {
         // Clear the cart
         clearCart();
         // Navigate to success page
-        router.push(`/checkout/success?orderId=${data.orderId}`);
+        router.push(`/checkout/success?orderId=${encodeURIComponent(data.orderNumber ?? data.orderId)}`);
       } else {
-        alert('There was an error processing your order.');
+        setSubmitError(data.error ?? 'There was an error processing your order.');
       }
     } catch (error) {
-      console.error(error);
-      alert('Network error. Please try again.');
+      setSubmitError(error instanceof Error ? error.message : 'Network error. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -146,7 +177,7 @@ export default function CheckoutPage() {
               </div>
 
               <h3 className="font-bold text-wood-950 dark:text-white mb-4">Payment Method</h3>
-              <div className="space-y-3 mb-8">
+              <div className="space-y-3 mb-6">
                 <label className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${paymentMethod === 'COD' ? 'border-accent bg-accent/5' : 'border-wood-200 dark:border-timber-700'}`}>
                   <input type="radio" name="payment" value="COD" checked={paymentMethod === 'COD'} onChange={(e) => setPaymentMethod(e.target.value)} className="accent-accent w-5 h-5" />
                   <span className="font-medium text-wood-950 dark:text-white">Cash on Delivery / Pay at Site</span>
@@ -157,6 +188,27 @@ export default function CheckoutPage() {
                 </label>
               </div>
 
+              {paymentMethod !== 'COD' && (
+                <div className="mb-8">
+                  <h4 className="text-base font-semibold text-wood-950 dark:text-white mb-3">Choose UPI provider</h4>
+                  <div className="grid grid-cols-1 gap-3">
+                    {providerOptions.map((option) => (
+                      <label key={option.value} className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-colors ${paymentProvider === option.value ? 'border-accent bg-accent/5' : 'border-wood-200 dark:border-timber-700'}`}>
+                        <input
+                          type="radio"
+                          name="paymentProvider"
+                          value={option.value}
+                          checked={paymentProvider === option.value}
+                          onChange={(e) => setPaymentProvider(e.target.value)}
+                          className="accent-accent w-5 h-5"
+                        />
+                        <span className="font-medium text-wood-950 dark:text-white">{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <button 
                 type="submit"
                 form="checkout-form"
@@ -165,6 +217,12 @@ export default function CheckoutPage() {
               >
                 {isSubmitting ? 'Processing...' : 'Place Order'} <ArrowRight size={20} />
               </button>
+
+              {submitError && (
+                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+                  {submitError}
+                </div>
+              )}
 
               <div className="mt-6 flex flex-col gap-2">
                 <div className="flex items-center justify-center gap-2 text-sm text-timber-500 font-medium">

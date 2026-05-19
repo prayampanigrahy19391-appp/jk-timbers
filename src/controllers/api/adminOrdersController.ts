@@ -3,13 +3,19 @@ import { errorResponse, jsonResponse, parseJsonBody } from '@/utils/api';
 import { updateOrderStatusById } from '@/services/orderService';
 import { auth } from '@/../auth';
 import { isAdmin } from '@/lib/permissions';
+import { OrderStatus } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 export async function adminOrdersController(request: Request, orderId: string) {
   const session = await auth();
   
   // Note: Middleware already protects this route, but we double-check here
-  if (!session?.user || !isAdmin(session.user.role)) {
+  if (!session?.user) {
     return errorResponse('Unauthorized.', 401);
+  }
+
+  if (!isAdmin(session.user.role)) {
+    return errorResponse('Forbidden.', 403);
   }
 
   const parsedBody = await parseJsonBody(request, orderStatusUpdateSchema);
@@ -18,10 +24,13 @@ export async function adminOrdersController(request: Request, orderId: string) {
   }
 
   try {
-    const order = await updateOrderStatusById(orderId, parsedBody.data.status);
+    const order = await updateOrderStatusById(orderId, parsedBody.data.status as OrderStatus, {
+      actorId: session.user.id,
+      notes: parsedBody.data.notes,
+    });
     return jsonResponse({ success: true, data: order }, 200);
   } catch (error) {
-    console.error('Admin Orders Controller Error:', error);
-    return errorResponse('Failed to update order status.', 500);
+    logger.error('Admin order update failed.', { error, orderId });
+    return errorResponse(error instanceof Error ? error.message : 'Failed to update order status.', 409);
   }
 }

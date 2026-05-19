@@ -17,7 +17,7 @@ function mapToStaticProduct(dbProduct: Product & { category?: Category | null })
     id: dbProduct.slug,
     name: dbProduct.name,
     category: dbProduct.category?.name || 'Timber',
-    price: dbProduct.price ? `₹${dbProduct.price.toNumber().toLocaleString('en-IN')}` : 'Contact for Price',
+    price: dbProduct.basePrice ? `₹${dbProduct.basePrice.toNumber().toLocaleString('en-IN')}` : 'Contact for Price',
     unit: dbProduct.unit,
     image,
     badge: dbProduct.badge,
@@ -30,7 +30,7 @@ function mapToStaticProduct(dbProduct: Product & { category?: Category | null })
 
 export async function getCatalogProducts(): Promise<StaticProduct[]> {
   const products = await prisma.product.findMany({
-    where: { isActive: true },
+    where: { isActive: true, status: 'PUBLISHED' },
     include: { category: true },
     orderBy: { createdAt: 'desc' },
   });
@@ -39,8 +39,8 @@ export async function getCatalogProducts(): Promise<StaticProduct[]> {
 }
 
 export async function getCatalogProductById(slug: string): Promise<StaticProduct | undefined> {
-  const product = await prisma.product.findUnique({
-    where: { slug, isActive: true },
+  const product = await prisma.product.findFirst({
+    where: { slug, isActive: true, status: 'PUBLISHED' },
     include: { category: true },
   });
   

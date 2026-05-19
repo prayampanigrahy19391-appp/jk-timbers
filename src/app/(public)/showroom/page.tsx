@@ -4,6 +4,8 @@ import { ArrowRight, Star } from 'lucide-react';
 
 import { getCatalogProducts } from '@/repositories/catalogRepository';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ShowroomPage() {
   const woodTypes = await getCatalogProducts();
   return (

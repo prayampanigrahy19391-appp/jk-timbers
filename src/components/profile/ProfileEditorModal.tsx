@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, User, MapPin, Phone, Mail, Save, Loader2, CheckCircle, LogOut } from 'lucide-react';
 import { signOut } from 'next-auth/react';
@@ -24,7 +24,7 @@ export default function ProfileEditorModal({ isOpen, onClose, userEmail }: Profi
     address: { street: '', city: '', zipCode: '' }
   });
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     setIsLoading(true);
     setMessage(null);
     try {
@@ -46,14 +46,17 @@ export default function ProfileEditorModal({ isOpen, onClose, userEmail }: Profi
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    if (isOpen) {
-      fetchProfile();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+    if (!isOpen) return;
+
+    const timer = window.setTimeout(() => {
+      void fetchProfile();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [fetchProfile, isOpen]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -90,7 +93,7 @@ export default function ProfileEditorModal({ isOpen, onClose, userEmail }: Profi
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to update profile' });
       }
-    } catch (err) {
+    } catch {
       setMessage({ type: 'error', text: 'Network error occurred.' });
     } finally {
       setIsSaving(false);

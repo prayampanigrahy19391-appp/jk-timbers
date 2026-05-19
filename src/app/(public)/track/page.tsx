@@ -25,7 +25,7 @@ export default function TrackOrderPage() {
         throw new Error('Order not found. Please check your Order ID.');
       }
       const data = await res.json();
-      setOrderData(data);
+      setOrderData(data.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
@@ -104,8 +104,9 @@ export default function TrackOrderPage() {
                   className="absolute top-1/2 left-0 h-1 bg-accent -translate-y-1/2 z-0 rounded-full transition-all duration-1000"
                   style={{ 
                     width: orderData.status === 'PENDING' ? '15%' : 
-                           orderData.status === 'SHIPPED' ? '50%' : 
-                           orderData.status === 'DELIVERED' ? '100%' : '0%'
+                           ['CONFIRMED', 'PROCESSING', 'PACKED'].includes(orderData.status) ? '35%' :
+                           orderData.status === 'SHIPPED' ? '65%' :
+                           ['DELIVERED', 'COMPLETED'].includes(orderData.status) ? '100%' : '0%'
                   }}
                 />
 
@@ -113,7 +114,7 @@ export default function TrackOrderPage() {
                   {/* Step 1 */}
                   <div className="flex flex-col items-center">
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 ${
-                      ['PENDING', 'SHIPPED', 'DELIVERED'].includes(orderData.status) 
+                      ['PENDING', 'CONFIRMED', 'PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED', 'COMPLETED'].includes(orderData.status) 
                         ? 'bg-accent border-yellow-200 dark:border-yellow-900/30 text-wood-950' 
                         : 'bg-wood-100 dark:bg-timber-900 border-white dark:border-timber-950 text-timber-400'
                     }`}>
@@ -125,7 +126,7 @@ export default function TrackOrderPage() {
                   {/* Step 2 */}
                   <div className="flex flex-col items-center">
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 ${
-                      ['SHIPPED', 'DELIVERED'].includes(orderData.status) 
+                      ['SHIPPED', 'DELIVERED', 'COMPLETED'].includes(orderData.status) 
                         ? 'bg-accent border-yellow-200 dark:border-yellow-900/30 text-wood-950' 
                         : 'bg-wood-100 dark:bg-timber-900 border-white dark:border-timber-950 text-timber-400'
                     }`}>
@@ -137,7 +138,7 @@ export default function TrackOrderPage() {
                   {/* Step 3 */}
                   <div className="flex flex-col items-center">
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 ${
-                      orderData.status === 'DELIVERED' 
+                      ['DELIVERED', 'COMPLETED'].includes(orderData.status) 
                         ? 'bg-green-500 border-green-200 dark:border-green-900/30 text-white' 
                         : 'bg-wood-100 dark:bg-timber-900 border-white dark:border-timber-950 text-timber-400'
                     }`}>
@@ -150,8 +151,9 @@ export default function TrackOrderPage() {
 
               <div className="mt-8 text-center">
                 {orderData.status === 'PENDING' && <p className="text-timber-600 dark:text-timber-400">Your order is currently being processed at our warehouse. We will dispatch it shortly.</p>}
-                {orderData.status === 'SHIPPED' && <p className="text-yellow-600 dark:text-yellow-500 font-medium">Your timber is on the truck! Our driver will contact you prior to arrival.</p>}
-                {orderData.status === 'DELIVERED' && <p className="text-green-600 dark:text-green-500 font-medium">This order has been successfully delivered. Thank you for choosing JK Timbers!</p>}
+                {['CONFIRMED', 'PROCESSING', 'PACKED'].includes(orderData.status) && <p className="text-timber-600 dark:text-timber-400">Your order is confirmed and moving through warehouse preparation.</p>}
+                {orderData.status === 'SHIPPED' && <p className="text-yellow-600 dark:text-yellow-500 font-medium">Your timber is on the truck. Our driver will contact you prior to arrival.</p>}
+                {['DELIVERED', 'COMPLETED'].includes(orderData.status) && <p className="text-green-600 dark:text-green-500 font-medium">This order has been successfully delivered. Thank you for choosing JK Timbers!</p>}
               </div>
 
             </motion.div>

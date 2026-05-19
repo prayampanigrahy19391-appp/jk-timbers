@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/../auth';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 
 const profileUpdateSchema = z.object({
@@ -61,11 +62,12 @@ export async function PUT(req: Request) {
     }
 
     const { name, phone, address } = result.data;
+    const normalizedPhone = phone?.replace(/\D/g, '').trim() || null;
 
     // Update user details
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { name, phone: phone || null },
+      data: { name, phone: normalizedPhone },
     });
 
     // Handle Address Update
@@ -99,6 +101,10 @@ export async function PUT(req: Request) {
 
     return NextResponse.json({ success: true, message: 'Profile updated successfully' });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json({ error: 'Phone number already in use.' }, { status: 409 });
+    }
+
     console.error('Error updating profile:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }

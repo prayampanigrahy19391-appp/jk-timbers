@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Building2, ShieldCheck, FileText, ArrowRight, Package, CheckCircle } from 'lucide-react';
 
 export default function ContractorsPortal() {
-  const [formData, setFormData] = useState({ firstName: '', lastName: '', company: '', gstNumber: '', email: '' });
+  const [formData, setFormData] = useState({ firstName: '', lastName: '', company: '', gstNumber: '', email: '', phone: '', city: '', businessType: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 
@@ -25,7 +25,7 @@ export default function ContractorsPortal() {
       });
       const data = await res.json();
       setResult({ success: data.success, message: data.message || data.error });
-      if (data.success) setFormData({ firstName: '', lastName: '', company: '', gstNumber: '', email: '' });
+      if (data.success) setFormData({ firstName: '', lastName: '', company: '', gstNumber: '', email: '', phone: '', city: '', businessType: '' });
     } catch {
       setResult({ success: false, message: 'Network error. Please try again.' });
     } finally {
@@ -94,6 +94,11 @@ export default function ContractorsPortal() {
                 <input type="text" name="company" placeholder="Company Name" value={formData.company} onChange={handleChange} className="w-full p-4 rounded-xl bg-wood-900 border border-wood-800 text-white placeholder-wood-500 focus:outline-none focus:border-accent" />
                 <input type="text" name="gstNumber" placeholder="GST Number" value={formData.gstNumber} onChange={handleChange} className="w-full p-4 rounded-xl bg-wood-900 border border-wood-800 text-white placeholder-wood-500 focus:outline-none focus:border-accent" />
                 <input type="email" name="email" required placeholder="Email Address *" value={formData.email} onChange={handleChange} className="w-full p-4 rounded-xl bg-wood-900 border border-wood-800 text-white placeholder-wood-500 focus:outline-none focus:border-accent" />
+                <div className="grid grid-cols-2 gap-4">
+                  <input type="tel" name="phone" placeholder="Phone" value={formData.phone} onChange={handleChange} className="w-full p-4 rounded-xl bg-wood-900 border border-wood-800 text-white placeholder-wood-500 focus:outline-none focus:border-accent" />
+                  <input type="text" name="city" placeholder="City" value={formData.city} onChange={handleChange} className="w-full p-4 rounded-xl bg-wood-900 border border-wood-800 text-white placeholder-wood-500 focus:outline-none focus:border-accent" />
+                </div>
+                <input type="text" name="businessType" placeholder="Business Type (Builder, Architect, Contractor)" value={formData.businessType} onChange={handleChange} className="w-full p-4 rounded-xl bg-wood-900 border border-wood-800 text-white placeholder-wood-500 focus:outline-none focus:border-accent" />
                 
                 <button type="submit" disabled={isSubmitting} className="w-full bg-accent hover:bg-yellow-500 disabled:opacity-50 text-wood-950 font-bold py-4 rounded-xl transition-colors mt-4 flex items-center justify-center gap-2">
                   {isSubmitting ? 'Submitting...' : 'Apply for Partner Account'} <ArrowRight size={20} />

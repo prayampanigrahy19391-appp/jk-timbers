@@ -7,71 +7,106 @@ import bcrypt from 'bcryptjs';
 import env from '@/config/env';
 import { Role } from '@prisma/client';
 
+const secureCookieOptions = {
+  httpOnly: true,
+  sameSite: 'lax' as const,
+  path: '/',
+  secure: env.NODE_ENV === 'production',
+};
+
+const sessionCookieName =
+  env.NODE_ENV === 'production'
+    ? '__Secure-next-auth.session-token'
+    : 'next-auth.session-token';
+
 export const authConfig: NextAuthConfig = {
-  adapter: PrismaAdapter(prisma),
-  session: { strategy: 'jwt' },
+  // Use the Prisma adapter in production. Disable in development to avoid
+  // adapter-related runtime assertions while using Credentials + JWT.
+  adapter: env.NODE_ENV === 'production' ? PrismaAdapter(prisma) : undefined,
+  secret: env.AUTH_SECRET,
+  session: {
+    // Use JWT strategy to support CredentialsProvider sign-in in this setup.
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+    updateAge: 24 * 60 * 60, // Refresh session once every 24 hours
+  },
+  cookies: {
+    sessionToken: {
+      name: sessionCookieName,
+      options: secureCookieOptions,
+    },
+  },
   pages: {
-    signIn: '/login', // User login
+    signIn: '/login',
   },
   providers: [
-    GoogleProvider({
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
-      allowDangerousEmailAccountLinking: true,
-      profile(profile) {
-        return {
-          id: profile.sub,
-          name: profile.name,
-          email: profile.email,
-          image: profile.picture,
-          role: Role.CUSTOMER, // Default role for Google sign-ins
-        }
-      }
-    }),
-    CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        identifier: { label: 'Email or Phone', type: 'text' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        if (!credentials?.identifier || !credentials?.password) {
-          return null;
-        }
+    ...(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+      ? [
+          GoogleProvider({
+            clientId: env.GOOGLE_CLIENT_ID,
+            clientSecret: env.GOOGLE_CLIENT_SECRET,
+            profile(profile) {
+              return {
+                id: profile.sub,
+                name: profile.name,
+                email: profile.email,
+                image: profile.picture,
+                role: Role.CUSTOMER,
+              };
+            },
+          }),
+        ]
+      : []),
+    ...(env.ENABLE_CREDENTIALS === 'true'
+      ? [
+          CredentialsProvider({
+            name: 'Credentials',
+            credentials: {
+              identifier: { label: 'Email or Phone', type: 'text' },
+              password: { label: 'Password', type: 'password' },
+            },
+            async authorize(credentials) {
+              if (!credentials?.identifier || !credentials?.password) {
+                return null;
+              }
 
-        const identifier = credentials.identifier as string;
-        
-        // Find user by email or phone
-        const user = await prisma.user.findFirst({
-          where: {
-            OR: [
-              { email: identifier },
-              { phone: identifier },
-            ]
-          }
-        });
+              const identifier = String(credentials.identifier).trim();
+              const isEmail = identifier.includes('@');
+              const normalizedEmail = identifier.toLowerCase();
+              const normalizedPhone = identifier.replace(/\D/g, '');
 
-        if (!user || !user.password) {
-          return null;
-        }
+              const user = await prisma.user.findFirst({
+                where: {
+                  OR: [
+                    ...(isEmail ? [{ email: normalizedEmail }] : []),
+                    ...(!isEmail && normalizedPhone ? [{ phone: normalizedPhone }] : []),
+                  ],
+                },
+              });
 
-        const passwordMatch = await bcrypt.compare(
-          credentials.password as string,
-          user.password
-        );
+              if (!user?.password) {
+                return null;
+              }
 
-        if (!passwordMatch) {
-          return null;
-        }
+              const passwordMatch = await bcrypt.compare(
+                String(credentials.password),
+                user.password
+              );
 
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        };
-      },
-    }),
+              if (!passwordMatch) {
+                return null;
+              }
+
+              return {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+              };
+            },
+          }),
+        ]
+      : []),
   ],
   callbacks: {
     async jwt({ token, user }) {

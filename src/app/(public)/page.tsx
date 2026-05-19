@@ -146,7 +146,10 @@ export default function Home() {
       {/* Virtual Showroom CTA */}
       <section className="py-24 relative overflow-hidden">
         <div className="absolute inset-0 bg-wood-950 z-0" />
-        <div className="absolute inset-0 z-0 opacity-30" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/wood-pattern.png")' }} />
+        <div
+          className="absolute inset-0 z-0 opacity-30"
+          style={{ backgroundImage: 'radial-gradient(circle at top left, rgba(255,255,255,0.08), transparent 35%)' }}
+        />
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl md:text-5xl font-serif font-bold text-white mb-6">

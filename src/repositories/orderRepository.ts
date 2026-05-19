@@ -8,12 +8,18 @@ export async function createOrder(orderData: Prisma.OrderCreateInput) {
 export async function findOrderById(id: string) {
   return prisma.order.findUnique({
     where: { id },
-    select: {
-      id: true,
-      status: true,
-      customerName: true,
-      createdAt: true,
-      total: true,
+    include: {
+      orderItems: {
+        include: {
+          product: {
+            select: { id: true, name: true, slug: true, thumbnail: true },
+          },
+          variant: {
+            select: { id: true, name: true, sku: true },
+          },
+        },
+      },
+      statusHistory: { orderBy: { createdAt: 'asc' } },
     },
   });
 }
@@ -30,7 +36,7 @@ export async function updateOrderStatus(id: string, status: OrderStatus, notes?:
         orderId: id,
         status,
         notes,
-      }
+      },
     });
     
     return updated;
@@ -62,8 +68,9 @@ export async function findOrdersWithItems() {
     orderBy: { createdAt: 'desc' },
     include: {
       orderItems: {
-        include: { product: true },
+        include: { product: true, variant: true },
       },
+      statusHistory: { orderBy: { createdAt: 'asc' } },
     },
   });
 }

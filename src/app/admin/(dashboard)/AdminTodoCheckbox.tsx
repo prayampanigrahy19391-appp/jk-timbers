@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 export default function AdminTodoCheckbox({ orderId, status }: { orderId: string, status: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const isCompleted = status === 'SHIPPED' || status === 'DELIVERED';
+  const isCompleted = status !== 'PENDING';
 
   const handleToggle = async () => {
     if (isCompleted || loading) return;
@@ -14,7 +14,7 @@ export default function AdminTodoCheckbox({ orderId, status }: { orderId: string
       const res = await fetch(`/api/admin/orders/${orderId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'SHIPPED' })
+        body: JSON.stringify({ status: 'CONFIRMED', notes: 'Order confirmed from dashboard action list.' })
       });
       if (res.ok) {
         router.refresh();

@@ -1,83 +1,520 @@
-import { findProductsBySlugs, countLowStockProducts } from '@/repositories/productRepository';
-import { findOrderById, updateOrderStatus, countOrders, findRecentPendingOrders, findOrdersWithItems, calculateTotalRevenue } from '@/repositories/orderRepository';
+import { randomUUID } from 'crypto';
+import { countLowStockProducts } from '@/repositories/productRepository';
+import {
+  countOrders,
+  findRecentPendingOrders,
+  findOrdersWithItems,
+  calculateTotalRevenue,
+} from '@/repositories/orderRepository';
 import { countUsers } from '@/repositories/userRepository';
-import type { CartItem } from '@/types/product';
-import { OrderStatus, PaymentStatus, PaymentMethod } from '@prisma/client';
+import {
+  InventoryTransactionSource,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  PaymentProvider,
+  Prisma,
+} from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { deductStock, restoreStock } from '@/services/inventoryService';
+import {
+  assertExpectedTotal,
+  calculateLinePrice,
+  calculateOrderTotals,
+} from '@/services/pricingService';
+import { createInvoice, createPaymentAttempt, recordAuditLog } from '@/services/paymentService';
+import {
+  assertAllowedOrderTransition,
+  restoresInventoryForTransition,
+} from '@/services/orderStateMachine';
 
-export async function createCheckoutOrder(options: {
-  items: CartItem[];
-  customer: {
-    name: string;
-    email: string;
-    phone: string;
-    address: string;
-    city: string;
-    zipCode: string;
-  };
-  paymentMethod: 'COD' | 'BANK';
-  total: number;
-}) {
-  const productSlugs = options.items.map(item => item.id);
-  const dbProducts = await findProductsBySlugs(productSlugs);
+type CheckoutCustomer = {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  zipCode: string;
+};
 
-  if (dbProducts.length !== options.items.length) {
-    throw new Error('One or more products in the cart are invalid or inactive.');
+type ResolvedCheckoutLine = {
+  productId: string;
+  variantId?: string;
+  sku: string;
+  name: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  lineSubtotal: number;
+  discountTotal: number;
+  lineTotal: number;
+  snapshot: Record<string, unknown>;
+};
+
+function normalizePaymentMethod(paymentMethod: 'COD' | 'BANK' | 'UPI') {
+  if (paymentMethod === 'BANK') return PaymentMethod.BANK;
+  if (paymentMethod === 'UPI') return PaymentMethod.UPI;
+  return PaymentMethod.COD;
+}
+
+function initialPaymentStatus(paymentMethod: PaymentMethod) {
+  return paymentMethod === PaymentMethod.COD ? PaymentStatus.UNPAID : PaymentStatus.PENDING;
+}
+
+async function generateOrderNumber(tx: Prisma.TransactionClient) {
+  const today = new Date();
+  const datePart = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, '0'),
+    String(today.getDate()).padStart(2, '0'),
+  ].join('');
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const suffix = randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
+    const orderNumber = `JK-${datePart}-${suffix}`;
+    const existing = await tx.order.findUnique({ where: { orderNumber }, select: { id: true } });
+    if (!existing) return orderNumber;
   }
 
-  // Wrap the entire order creation in a transaction to ensure atomicity
-  const order = await prisma.$transaction(async (tx) => {
-    // 1. Calculate and verify total based on DB prices (security check)
-    // For now we trust the client total or calculate it. Let's trust client total for MVP,
-    // but in a real app, we'd recalculate total here.
+  throw new Error('Unable to allocate a unique order number.');
+}
 
-    // 2. Create the order
-    const createdOrder = await tx.order.create({
-      data: {
-        customerName: options.customer.name,
-        email: options.customer.email,
-        phone: options.customer.phone,
-        deliveryAddress: options.customer.address,
-        city: options.customer.city,
-        zipCode: options.customer.zipCode,
-        total: options.total,
-        paymentStatus: options.paymentMethod === 'COD' ? PaymentStatus.UNPAID : PaymentStatus.PENDING,
-        paymentMethod: options.paymentMethod === 'COD' ? PaymentMethod.COD : PaymentMethod.BANK,
-        status: OrderStatus.PENDING,
-        orderItems: {
-          create: options.items.map((item) => {
-            const dbProduct = dbProducts.find(p => p.slug === item.id);
-            return {
-              productId: dbProduct!.id,
-              quantity: item.quantity,
-              price: dbProduct!.price, // snapshot price at time of order
-            };
-          }),
-        },
-      },
-    });
+async function generateInvoiceNumber(tx: Prisma.TransactionClient) {
+  const today = new Date();
+  const prefix = `INV-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
 
-    // 3. Create the initial status history entry
-    await tx.orderStatusHistory.create({
-      data: {
-        orderId: createdOrder.id,
-        status: OrderStatus.PENDING,
-        notes: 'Order placed via checkout.',
-      }
-    });
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const candidate = `${prefix}-${randomUUID().replace(/-/g, '').slice(0, 6).toUpperCase()}`;
+    const existing = await tx.invoice.findUnique({ where: { invoiceNumber: candidate }, select: { id: true } });
+    if (!existing) return candidate;
+  }
 
-    return createdOrder;
+  throw new Error('Unable to allocate a unique invoice number.');
+}
+
+async function resolveContractorDiscount(tx: Prisma.TransactionClient, userId?: string | null) {
+  if (!userId) return null;
+
+  const application = await tx.contractorApplication.findUnique({
+    where: { userId },
+    select: { status: true, discountRate: true },
   });
 
-  return order;
+  return application?.status === 'APPROVED' ? application.discountRate : null;
 }
 
-export async function getTrackingOrder(orderId: string) {
-  return findOrderById(orderId);
+async function resolveCheckoutLines(
+  tx: Prisma.TransactionClient,
+  cartItems: {
+    sku: string;
+    quantity: number;
+    productId: string | null;
+    variantId: string | null;
+  }[],
+  contractorDiscountRate?: Prisma.Decimal | null
+): Promise<ResolvedCheckoutLine[]> {
+  const quantityByKey = cartItems.reduce<Record<string, number>>((acc, item) => {
+    const key = item.variantId ?? item.productId ?? item.sku.trim();
+    acc[key] = (acc[key] ?? 0) + item.quantity;
+    return acc;
+  }, {});
+
+  const keys = Object.keys(quantityByKey);
+  if (keys.length === 0) {
+    throw new Error('Cart is empty.');
+  }
+
+  const [variants, products] = await Promise.all([
+    tx.productVariant.findMany({
+      where: {
+        OR: [{ id: { in: keys } }, { sku: { in: keys } }],
+      },
+      include: { product: { include: { category: true } } },
+    }),
+    tx.product.findMany({
+      where: {
+        OR: [{ id: { in: keys } }, { slug: { in: keys } }, { sku: { in: keys } }],
+      },
+      include: { category: true },
+    }),
+  ]);
+
+  const variantById = new Map(variants.map((variant) => [variant.id, variant]));
+  const variantBySku = new Map(variants.map((variant) => [variant.sku, variant]));
+  const productById = new Map(products.map((product) => [product.id, product]));
+  const productBySlug = new Map(products.map((product) => [product.slug, product]));
+  const productBySku = new Map(products.map((product) => [product.sku, product]));
+
+  return keys.map((key) => {
+    const quantity = quantityByKey[key];
+    const variant = variantById.get(key) ?? variantBySku.get(key);
+    const product = variant?.product ?? productById.get(key) ?? productBySlug.get(key) ?? productBySku.get(key);
+
+    if (!product || !product.isActive || product.status !== 'PUBLISHED') {
+      throw new Error('One or more products in the cart are invalid or inactive.');
+    }
+
+    if (variant && !variant.isActive) {
+      throw new Error(`Variant ${variant.sku} is no longer available.`);
+    }
+
+    const availableStock = variant ? variant.stock : product.stock;
+    if (availableStock < quantity) {
+      throw new Error(`Insufficient stock for ${variant ? `${product.name} - ${variant.name}` : product.name}.`);
+    }
+
+    const pricing = calculateLinePrice({
+      unitPrice: variant?.price ?? product.basePrice,
+      quantity,
+      contractorDiscountRate,
+    });
+
+    const firstImage = Array.isArray(product.images) ? product.images[0] : undefined;
+
+    return {
+      productId: product.id,
+      variantId: variant?.id,
+      sku: variant?.sku ?? product.sku,
+      name: variant ? `${product.name} - ${variant.name}` : product.name,
+      unit: variant?.unit ?? product.unit,
+      quantity,
+      unitPrice: pricing.unitPrice,
+      lineSubtotal: pricing.subtotal,
+      discountTotal: pricing.discountTotal,
+      lineTotal: pricing.total,
+      snapshot: {
+        productName: product.name,
+        variantName: variant?.name,
+        categoryName: product.category.name,
+        slug: product.slug,
+        image: variant?.image ?? product.thumbnail ?? firstImage,
+      },
+    };
+  });
 }
 
-export async function updateOrderStatusById(orderId: string, status: OrderStatus) {
-  return updateOrderStatus(orderId, status);
+export async function createCheckoutOrder(options: {
+  cartToken: string;
+  userId?: string;
+  customer: CheckoutCustomer;
+  paymentMethod: 'COD' | 'BANK' | 'UPI';
+  paymentProvider?: PaymentProvider;
+  paymentIdempotencyKey?: string;
+  total?: number;
+}) {
+  return prisma.$transaction(
+    async (tx) => {
+      const cart = await tx.cart.findUnique({
+        where: { token: options.cartToken },
+        include: { items: true, order: true },
+      });
+
+      if (!cart) {
+        throw new Error('Cart not found. Please refresh your cart and try again.');
+      }
+
+      if (cart.status === 'CHECKED_OUT') {
+        const existingOrder = cart.order ?? (await tx.order.findUnique({ where: { cartId: cart.id } }));
+        if (existingOrder) {
+          return tx.order.findUniqueOrThrow({
+            where: { id: existingOrder.id },
+            include: { paymentAttempts: true },
+          });
+        }
+        throw new Error('Cart has already been checked out.');
+      }
+
+      if (cart.items.length === 0) {
+        throw new Error('Cart is empty.');
+      }
+
+      const contractorDiscountRate = await resolveContractorDiscount(tx, options.userId ?? cart.userId);
+      const orderItems = await resolveCheckoutLines(tx, cart.items, contractorDiscountRate);
+      const totals = calculateOrderTotals(
+        orderItems.map((item) => ({
+          subtotal: item.lineSubtotal,
+          discountTotal: item.discountTotal,
+          total: item.lineTotal,
+        }))
+      );
+
+      assertExpectedTotal(options.total, totals.total);
+
+      const paymentMethod = normalizePaymentMethod(options.paymentMethod);
+      const order = await tx.order.create({
+        data: {
+          orderNumber: await generateOrderNumber(tx),
+          userId: options.userId ?? cart.userId,
+          cartId: cart.id,
+          customerName: options.customer.name,
+          email: options.customer.email.toLowerCase(),
+          phone: options.customer.phone,
+          deliveryAddress: options.customer.address,
+          city: options.customer.city,
+          zipCode: options.customer.zipCode,
+          subtotal: totals.subtotal,
+          taxTotal: totals.taxTotal,
+          deliveryFee: totals.deliveryFee,
+          discountTotal: totals.discountTotal,
+          total: totals.total,
+          currency: totals.currency,
+          paymentStatus: initialPaymentStatus(paymentMethod),
+          paymentMethod,
+          status: OrderStatus.PENDING,
+          orderItems: {
+            create: orderItems.map((item) => ({
+              productId: item.productId,
+              variantId: item.variantId,
+              sku: item.sku,
+              name: item.name,
+              unit: item.unit,
+              quantity: item.quantity,
+              price: item.unitPrice,
+              lineTotal: item.lineTotal,
+              itemSnapshot: item.snapshot as Prisma.InputJsonValue,
+            })),
+          },
+        },
+      });
+
+      for (const item of orderItems) {
+        await deductStock(
+          tx,
+          item.variantId ? { variantId: item.variantId } : { productId: item.productId },
+          item.quantity,
+          {
+            orderId: order.id,
+            source: InventoryTransactionSource.ORDER_CREATION,
+            reason: `Order reservation for ${item.sku}`,
+            metadata: { orderNumber: order.orderNumber, cartId: cart.id },
+          }
+        );
+      }
+
+      if (paymentMethod !== PaymentMethod.COD) {
+        const provider: PaymentProvider = options.paymentProvider ?? 'UPI';
+
+        await createPaymentAttempt(
+          {
+            orderId: order.id,
+            provider,
+            amount: totals.total,
+            currency: totals.currency,
+            idempotencyKey: options.paymentIdempotencyKey ?? `${provider}:${order.id}`,
+            status: 'PENDING',
+            metadata: {
+              orderNumber: order.orderNumber,
+              cartId: cart.id,
+              paymentMethod,
+            },
+          },
+          tx
+        );
+      }
+
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: order.id,
+          status: OrderStatus.PENDING,
+          notes: 'Order placed via validated server cart.',
+        },
+      });
+
+      await tx.cart.update({
+        where: { id: cart.id },
+        data: {
+          status: 'CHECKED_OUT',
+          checkedOutAt: new Date(),
+          total: totals.total,
+        },
+      });
+
+      return tx.order.findUniqueOrThrow({
+        where: { id: order.id },
+        include: { paymentAttempts: true },
+      });
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+  );
+}
+
+export async function updateOrderPaymentStatus(orderId: string, status: PaymentStatus, notes?: string) {
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({ where: { id: orderId }, include: { orderItems: true } });
+    if (!order) throw new Error('Order not found.');
+
+    const data: Prisma.OrderUpdateInput = {
+      paymentStatus: status,
+    };
+    let timelineStatus: OrderStatus | undefined;
+    let shouldRestoreInventory = false;
+
+    if (status === PaymentStatus.PAID && order.status === OrderStatus.PENDING) {
+      data.status = OrderStatus.CONFIRMED;
+      timelineStatus = OrderStatus.CONFIRMED;
+    }
+
+    if (status === PaymentStatus.FAILED && order.status === OrderStatus.PENDING) {
+      data.status = OrderStatus.CANCELLED;
+      timelineStatus = OrderStatus.CANCELLED;
+      shouldRestoreInventory = true;
+    }
+
+    if (status === PaymentStatus.REFUNDED && order.status !== OrderStatus.REFUNDED) {
+      data.status = OrderStatus.REFUNDED;
+      timelineStatus = OrderStatus.REFUNDED;
+    }
+
+    const updated = await tx.order.update({ where: { id: orderId }, data });
+
+    if (timelineStatus) {
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId,
+          status: timelineStatus,
+          notes: notes ?? `Order updated after payment status changed to ${status}.`,
+        },
+      });
+    }
+
+    if (shouldRestoreInventory) {
+      for (const item of order.orderItems) {
+        await restoreStock(
+          tx,
+          item.productId ?? undefined,
+          item.variantId ?? undefined,
+          item.quantity,
+          `Stock restored after payment failure for order ${order.orderNumber}`,
+          InventoryTransactionSource.ORDER_CANCELLATION,
+          { orderNumber: order.orderNumber },
+          order.id
+        );
+      }
+    }
+
+    if (status === PaymentStatus.PAID) {
+      const existingInvoice = await tx.invoice.findUnique({ where: { orderId } });
+      if (!existingInvoice) {
+        await createInvoice(
+          {
+            orderId,
+            invoiceNumber: await generateInvoiceNumber(tx),
+            subtotal: Number(order.subtotal),
+            taxTotal: Number(order.taxTotal),
+            deliveryFee: Number(order.deliveryFee),
+            discountTotal: Number(order.discountTotal),
+            total: Number(order.total),
+            currency: order.currency,
+            status: 'PAID',
+            metadata: {
+              paymentStatus: status,
+              orderNumber: order.orderNumber,
+            },
+          },
+          tx
+        );
+      }
+
+      await recordAuditLog(
+        {
+          orderId,
+          eventType: 'ORDER_PAYMENT_CONFIRMED',
+          eventSource: 'ORDER_SERVICE',
+          details: {
+            paymentStatus: status,
+            orderNumber: order.orderNumber,
+          },
+        },
+        tx
+      );
+    }
+
+    return updated;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+
+export async function getTrackingOrder(orderIdOrNumber: string) {
+  return prisma.order.findFirst({
+    where: {
+      OR: [{ id: orderIdOrNumber }, { orderNumber: orderIdOrNumber }],
+    },
+    include: {
+      orderItems: {
+        include: {
+          product: { select: { id: true, name: true, slug: true, thumbnail: true } },
+          variant: { select: { id: true, name: true, sku: true } },
+        },
+      },
+      statusHistory: { orderBy: { createdAt: 'asc' } },
+    },
+  });
+}
+
+export async function updateOrderStatusById(
+  orderId: string,
+  newStatus: OrderStatus,
+  options: { actorId?: string; notes?: string } = {}
+) {
+  return prisma.$transaction(
+    async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { orderItems: true },
+      });
+
+      if (!order) throw new Error('Order not found.');
+
+      const currentStatus = order.status;
+      if (currentStatus === newStatus) return order;
+
+      assertAllowedOrderTransition(currentStatus, newStatus);
+
+      const updateResult = await tx.order.updateMany({
+        where: { id: orderId, status: currentStatus },
+        data: {
+          status: newStatus,
+          ...(newStatus === OrderStatus.REFUNDED ? { paymentStatus: PaymentStatus.REFUNDED } : {}),
+        },
+      });
+
+      if (updateResult.count !== 1) {
+        throw new Error('Order status changed while this update was being processed.');
+      }
+
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId,
+          status: newStatus,
+          notes: options.notes ?? `Order moved from ${currentStatus} to ${newStatus}.`,
+          actorId: options.actorId,
+        },
+      });
+
+      if (restoresInventoryForTransition(currentStatus, newStatus)) {
+        for (const item of order.orderItems) {
+          await restoreStock(
+            tx,
+            item.productId ?? undefined,
+            item.variantId ?? undefined,
+            item.quantity,
+            `Stock restored after order ${newStatus}`,
+            InventoryTransactionSource.ORDER_CANCELLATION,
+            { orderNumber: order.orderNumber },
+            order.id
+          );
+        }
+      }
+
+      return tx.order.findUniqueOrThrow({
+        where: { id: orderId },
+        include: {
+          orderItems: true,
+          statusHistory: { orderBy: { createdAt: 'asc' } },
+        },
+      });
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+  );
 }
 
 export async function getAdminDashboardData() {
@@ -102,4 +539,15 @@ export async function getAdminDashboardData() {
 
 export async function getAdminOrders() {
   return findOrdersWithItems();
+}
+
+export async function getCustomerOrders(userId: string) {
+  return prisma.order.findMany({
+    where: { userId },
+    include: {
+      orderItems: true,
+      statusHistory: { orderBy: { createdAt: 'asc' } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
 }

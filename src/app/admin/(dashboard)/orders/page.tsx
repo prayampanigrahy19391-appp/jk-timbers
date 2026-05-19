@@ -27,7 +27,7 @@ export default async function AdminOrdersPage() {
               <div className="p-6 border-b border-wood-100 dark:border-timber-800 bg-wood-50 dark:bg-timber-950/50 flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
-                    <span className="font-mono text-sm text-timber-500">{order.id}</span>
+                    <span className="font-mono text-sm text-timber-500">{order.orderNumber}</span>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
                       order.status === 'DELIVERED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
                       order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
@@ -44,10 +44,7 @@ export default async function AdminOrdersPage() {
                     <p className="text-xs text-timber-500 uppercase tracking-wider font-bold mb-1">Total Amount</p>
                     <p className="text-xl font-black text-wood-950 dark:text-white">₹{order.total.toNumber().toLocaleString('en-IN')}</p>
                   </div>
-                  {/* Status Update Button Simulation */}
-                  {order.status === 'PENDING' && (
-                     <UpdateStatusButton orderId={order.id} />
-                  )}
+                  <UpdateStatusButton orderId={order.id} status={order.status} />
                 </div>
               </div>
 
@@ -77,7 +74,7 @@ export default async function AdminOrdersPage() {
                       <li key={item.id} className="flex justify-between items-center text-sm">
                         <span className="text-timber-700 dark:text-timber-300">
                           <span className="font-bold text-wood-900 dark:text-white mr-2">{item.quantity}x</span>
-                          {item.product.name}
+                          {item.name}
                         </span>
                         <span className="font-medium text-wood-900 dark:text-white">₹{(item.price.toNumber() * item.quantity).toLocaleString('en-IN')}</span>
                       </li>
@@ -96,4 +93,3 @@ export default async function AdminOrdersPage() {
     </>
   );
 }
-
