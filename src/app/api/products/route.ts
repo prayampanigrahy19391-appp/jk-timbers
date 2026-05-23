@@ -39,6 +39,27 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {});
 
+  const semantic = url.searchParams.get('semantic') === 'true';
+
+  if (semantic && query) {
+    const { vectorSearch } = await import('@/services/vectorSearchService');
+    const matchedProducts = await vectorSearch.search({
+      query,
+      categoryId,
+      minPrice,
+      maxPrice,
+      limit: pageSize,
+    });
+
+    return NextResponse.json({
+      products: matchedProducts,
+      total: matchedProducts.length,
+      page: 1,
+      pageSize,
+      totalPages: 1,
+    });
+  }
+
   const result = await searchCatalogProducts({
     query,
     categoryId,

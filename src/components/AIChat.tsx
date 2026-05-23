@@ -72,8 +72,9 @@ export default function AIChat() {
     { role: 'ai', text: 'Hello! I\'m the JK Timbers assistant. I can help with product info, pricing, delivery, and more. What are you looking for?' },
   ]);
   const [input, setInput] = useState('');
+  const [sessionId] = useState(() => 'sess_' + Math.random().toString(36).substring(2, 15));
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
 
     const userMessage = input.trim();
@@ -81,11 +82,38 @@ export default function AIChat() {
     setMessages(newMessages);
     setInput('');
 
-    // Simulate typing delay then respond
-    setTimeout(() => {
+    // Pre-insert a typing placeholder or send request directly
+    try {
+      const history = newMessages.map((m) => ({
+        role: m.role === 'ai' ? ('assistant' as const) : ('user' as const),
+        text: m.text,
+      }));
+
+      const res = await fetch('/api/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: userMessage,
+          sessionId,
+          history,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Server support request failed');
+      }
+
+      const body = await res.json();
+      if (body.success && body.data?.reply) {
+        setMessages((prev) => [...prev, { role: 'ai', text: body.data.reply }]);
+        return;
+      }
+      throw new Error('Invalid response shape');
+    } catch {
+      // Fallback to local pattern matching FAQ response
       const response = getAIResponse(userMessage);
       setMessages((prev) => [...prev, { role: 'ai', text: response }]);
-    }, 600);
+    }
   };
 
   return (

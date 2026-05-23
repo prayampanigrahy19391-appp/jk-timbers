@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, CheckCircle, Package, Truck, ShieldCheck } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import AddToCartButton from './AddToCartButton';
+import ProductRecommendations from '@/components/catalog/ProductRecommendations';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,6 +103,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
           </div>
         </div>
+        <ProductRecommendations currentProductId={resolvedParams.id} />
       </div>
     </div>
   );

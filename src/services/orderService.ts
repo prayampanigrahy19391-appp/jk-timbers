@@ -202,7 +202,7 @@ export async function createCheckoutOrder(options: {
   paymentIdempotencyKey?: string;
   total?: number;
 }) {
-  return prisma.$transaction(
+  const order = await prisma.$transaction(
     async (tx) => {
       const cart = await tx.cart.findUnique({
         where: { token: options.cartToken },
@@ -336,10 +336,34 @@ export async function createCheckoutOrder(options: {
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
   );
+
+  // Trigger background actions outside transaction after successful commit!
+  try {
+    const { queueEmailNotification } = await import('@/services/jobs/emailJob');
+    const { dispatchEcosystemEvent } = await import('@/services/webhookDispatchService');
+
+    await queueEmailNotification({
+      to: order.email,
+      subject: `Order Placed - ${order.orderNumber}`,
+      body: `Hi ${order.customerName},\n\nYour order ${order.orderNumber} for ₹${Number(order.total).toLocaleString('en-IN')} has been placed successfully.\n\nThank you for shopping with JK Timbers!\n\nBest regards,\nJK Timbers Team`,
+    }).catch(err => console.error('Failed to queue email notification:', err));
+
+    await dispatchEcosystemEvent('order.created', {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      total: Number(order.total),
+      customerEmail: order.email,
+    }).catch(err => console.error('Failed to dispatch ecosystem event:', err));
+  } catch (e) {
+    console.error('Failed to trigger post-checkout background events:', e);
+  }
+
+  return order;
 }
 
 export async function updateOrderPaymentStatus(orderId: string, status: PaymentStatus, notes?: string) {
-  return prisma.$transaction(async (tx) => {
+  let invoiceNumberResolved = '';
+  const updated = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId }, include: { orderItems: true } });
     if (!order) throw new Error('Order not found.');
 
@@ -365,7 +389,7 @@ export async function updateOrderPaymentStatus(orderId: string, status: PaymentS
       timelineStatus = OrderStatus.REFUNDED;
     }
 
-    const updated = await tx.order.update({ where: { id: orderId }, data });
+    const updatedOrder = await tx.order.update({ where: { id: orderId }, data });
 
     if (timelineStatus) {
       await tx.orderStatusHistory.create({
@@ -394,11 +418,13 @@ export async function updateOrderPaymentStatus(orderId: string, status: PaymentS
 
     if (status === PaymentStatus.PAID) {
       const existingInvoice = await tx.invoice.findUnique({ where: { orderId } });
+      let invoiceNumber = '';
       if (!existingInvoice) {
+        invoiceNumber = await generateInvoiceNumber(tx);
         await createInvoice(
           {
             orderId,
-            invoiceNumber: await generateInvoiceNumber(tx),
+            invoiceNumber,
             subtotal: Number(order.subtotal),
             taxTotal: Number(order.taxTotal),
             deliveryFee: Number(order.deliveryFee),
@@ -413,7 +439,10 @@ export async function updateOrderPaymentStatus(orderId: string, status: PaymentS
           },
           tx
         );
+      } else {
+        invoiceNumber = existingInvoice.invoiceNumber;
       }
+      invoiceNumberResolved = invoiceNumber;
 
       await recordAuditLog(
         {
@@ -429,8 +458,36 @@ export async function updateOrderPaymentStatus(orderId: string, status: PaymentS
       );
     }
 
-    return updated;
+    return updatedOrder;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+  // Post commit background jobs
+  try {
+    const { queueEmailNotification } = await import('@/services/jobs/emailJob');
+    if (status === PaymentStatus.PAID && invoiceNumberResolved) {
+      const { queueInvoiceGeneration } = await import('@/services/jobs/invoiceJob');
+      await queueInvoiceGeneration({
+        orderId,
+        invoiceNumber: invoiceNumberResolved,
+      }).catch(err => console.error('Failed to queue invoice generation:', err));
+
+      await queueEmailNotification({
+        to: updated.email,
+        subject: `Payment Confirmed - Order ${updated.orderNumber}`,
+        body: `Hi ${updated.customerName},\n\nWe have confirmed your payment of ₹${Number(updated.total).toLocaleString('en-IN')} for order ${updated.orderNumber}.\n\nYour invoice (${invoiceNumberResolved}) is being generated.\n\nThank you,\nJK Timbers Team`,
+      }).catch(err => console.error('Failed to queue email notification:', err));
+    } else if (status === PaymentStatus.FAILED) {
+      await queueEmailNotification({
+        to: updated.email,
+        subject: `Payment Failed - Order ${updated.orderNumber}`,
+        body: `Hi ${updated.customerName},\n\nYour payment attempt for order ${updated.orderNumber} failed. The order has been cancelled and stock has been restored to inventory.\n\nIf you believe this was an error, please try placing the order again.\n\nThank you,\nJK Timbers Team`,
+      }).catch(err => console.error('Failed to queue email notification:', err));
+    }
+  } catch (e) {
+    console.error('Failed to trigger post-payment background events:', e);
+  }
+
+  return updated;
 }
 
 export async function getTrackingOrder(orderIdOrNumber: string) {
@@ -455,7 +512,7 @@ export async function updateOrderStatusById(
   newStatus: OrderStatus,
   options: { actorId?: string; notes?: string } = {}
 ) {
-  return prisma.$transaction(
+  const order = await prisma.$transaction(
     async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
@@ -515,6 +572,31 @@ export async function updateOrderStatusById(
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
   );
+
+  // Post commit background jobs
+  try {
+    const { queueEmailNotification } = await import('@/services/jobs/emailJob');
+    const { dispatchEcosystemEvent } = await import('@/services/webhookDispatchService');
+
+    await queueEmailNotification({
+      to: order.email,
+      subject: `Order Status Updated: ${newStatus} - ${order.orderNumber}`,
+      body: `Hi ${order.customerName},\n\nYour order ${order.orderNumber} status has been updated to "${newStatus}".\n\nThank you,\nJK Timbers Team`,
+    }).catch(err => console.error('Failed to queue email notification:', err));
+
+    if (newStatus === OrderStatus.SHIPPED) {
+      await dispatchEcosystemEvent('order.shipped', {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        status: newStatus,
+        shippedAt: new Date().toISOString(),
+      }).catch(err => console.error('Failed to dispatch ecosystem event:', err));
+    }
+  } catch (e) {
+    console.error('Failed to trigger post-status-update background events:', e);
+  }
+
+  return order;
 }
 
 export async function getAdminDashboardData() {

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import assert from 'node:assert/strict';
 
 const disposableDatabaseUrl = process.env.TEST_DATABASE_URL;

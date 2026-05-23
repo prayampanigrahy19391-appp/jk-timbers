@@ -38,6 +38,20 @@ export default function CheckoutPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (window.hasOwnProperty('Razorpay')) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (items.length === 0) return;
@@ -80,17 +94,78 @@ export default function CheckoutPage() {
       const data = await response.json();
       
       if (data.success) {
-        // Clear the cart
-        clearCart();
-        // Navigate to success page
-        router.push(`/checkout/success?orderId=${encodeURIComponent(data.orderNumber ?? data.orderId)}`);
+        const paymentData = data.data?.payment;
+        if (paymentMethod !== 'COD' && paymentProvider === 'RAZORPAY' && paymentData?.razorpayOrderId) {
+          const scriptLoaded = await loadRazorpayScript();
+          if (!scriptLoaded) {
+            throw new Error('Razorpay SDK failed to load. Please check your internet connection.');
+          }
+
+          const options = {
+            key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_51MzS24e8g1',
+            amount: paymentData.amount,
+            currency: paymentData.currency || 'INR',
+            name: 'JK Timbers',
+            description: `Payment for Order ${data.orderNumber}`,
+            order_id: paymentData.razorpayOrderId,
+            prefill: {
+              name: formData.name,
+              email: formData.email,
+              contact: formData.phone,
+            },
+            theme: {
+              color: '#6b4c2a',
+            },
+            handler: async function (res: any) {
+              try {
+                setIsSubmitting(true);
+                const verifyRes = await fetch('/api/payments/verify', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    razorpay_order_id: res.razorpay_order_id,
+                    razorpay_payment_id: res.razorpay_payment_id,
+                    razorpay_signature: res.razorpay_signature,
+                    orderId: data.orderId,
+                  }),
+                });
+                const verifyData = await verifyRes.json();
+                if (verifyData.success) {
+                  clearCart();
+                  router.push(`/checkout/success?orderId=${encodeURIComponent(data.orderNumber ?? data.orderId)}`);
+                } else {
+                  setSubmitError(verifyData.error || 'Payment signature verification failed.');
+                }
+              } catch (err) {
+                setSubmitError('Verification request failed. Please contact support.');
+              } finally {
+                setIsSubmitting(false);
+              }
+            },
+            modal: {
+              ondismiss: function () {
+                setIsSubmitting(false);
+                setSubmitError('Payment process was cancelled by user.');
+              }
+            }
+          };
+
+          const rzp = new (window as any).Razorpay(options);
+          rzp.open();
+        } else {
+          // COD or generic bank transfer (which redirects directly for offline payments)
+          clearCart();
+          router.push(`/checkout/success?orderId=${encodeURIComponent(data.orderNumber ?? data.orderId)}`);
+        }
       } else {
         setSubmitError(data.error ?? 'There was an error processing your order.');
       }
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Network error. Please try again.');
     } finally {
-      setIsSubmitting(false);
+      if (paymentMethod === 'COD') {
+        setIsSubmitting(false);
+      }
     }
   };
 

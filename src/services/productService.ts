@@ -184,15 +184,16 @@ async function syncProductMedia(tx: Prisma.TransactionClient, productId: string,
 }
 
 async function syncProductVariants(tx: Prisma.TransactionClient, productId: string, variants?: ProductVariantWriteInput[]) {
-  if (!variants) return;
+  if (variants === undefined) return;
 
   const seenIds = variants.map((variant) => variant.id).filter(Boolean) as string[];
-  if (seenIds.length > 0) {
-    await tx.productVariant.updateMany({
-      where: { productId, id: { notIn: seenIds } },
-      data: { isActive: false },
-    });
-  }
+  await tx.productVariant.updateMany({
+    where: {
+      productId,
+      ...(seenIds.length > 0 ? { id: { notIn: seenIds } } : {}),
+    },
+    data: { isActive: false },
+  });
 
   for (const variant of variants) {
     const data = {

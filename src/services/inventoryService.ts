@@ -47,7 +47,7 @@ async function applyProductStockChange(
 
   const product = await tx.product.findUnique({
     where: { id: productId },
-    select: { stock: true },
+    select: { stock: true, lowStockThreshold: true, sku: true },
   });
 
   if (!product) {
@@ -85,6 +85,20 @@ async function applyProductStockChange(
       metadata: options.metadata as Prisma.InputJsonValue | undefined,
     },
   });
+
+  if (quantityChange < 0 && product.lowStockThreshold !== null && stockAfter <= product.lowStockThreshold) {
+    try {
+      const { dispatchEcosystemEvent } = await import('@/services/webhookDispatchService');
+      await dispatchEcosystemEvent('inventory.low', {
+        productId,
+        sku: product.sku,
+        stock: stockAfter,
+        lowStockThreshold: product.lowStockThreshold,
+      });
+    } catch (e) {
+      console.error('Failed to dispatch low stock ecosystem event:', e);
+    }
+  }
 }
 
 async function applyVariantStockChange(
@@ -97,7 +111,7 @@ async function applyVariantStockChange(
 
   const variant = await tx.productVariant.findUnique({
     where: { id: variantId },
-    select: { stock: true },
+    select: { stock: true, lowStockThreshold: true, sku: true },
   });
 
   if (!variant) {
@@ -135,6 +149,20 @@ async function applyVariantStockChange(
       metadata: options.metadata as Prisma.InputJsonValue | undefined,
     },
   });
+
+  if (quantityChange < 0 && variant.lowStockThreshold !== null && stockAfter <= variant.lowStockThreshold) {
+    try {
+      const { dispatchEcosystemEvent } = await import('@/services/webhookDispatchService');
+      await dispatchEcosystemEvent('inventory.low', {
+        variantId,
+        sku: variant.sku,
+        stock: stockAfter,
+        lowStockThreshold: variant.lowStockThreshold,
+      });
+    } catch (e) {
+      console.error('Failed to dispatch low stock ecosystem event:', e);
+    }
+  }
 }
 
 export async function deductStock(

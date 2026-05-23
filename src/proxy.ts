@@ -45,7 +45,7 @@ const applySecurityHeaders = (response: NextResponse) => {
   return response;
 };
 
-export default auth((req) => {
+export default auth(async (req) => {
   const { nextUrl } = req;
   const pathname = nextUrl.pathname;
   const isLoggedIn = !!req.auth?.user;
@@ -58,7 +58,7 @@ export default auth((req) => {
       pathname.startsWith('/api/cart') ||
       pathname.startsWith('/api/contact') ||
       pathname.startsWith('/api/contractors/register');
-    const rateLimitResult = rateLimit(
+    const rateLimitResult = await rateLimit(
       req,
       sensitiveApi ? 30 : 80,
       15 * 60 * 1000,
