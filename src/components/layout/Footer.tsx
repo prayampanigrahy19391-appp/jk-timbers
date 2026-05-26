@@ -75,11 +75,11 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="text-wood-500 shrink-0" size={20} />
-                <a href="tel:+919876543210" className="text-timber-300 hover:text-accent transition-colors">+91 98765 43210</a>
+                <a href="tel:+918018827170" className="text-timber-300 hover:text-accent transition-colors">+91 80188 27170</a>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="text-wood-500 shrink-0" size={20} />
-                <a href="mailto:info@jktimbers.com" className="text-timber-300 hover:text-accent transition-colors">info@jktimbers.com</a>
+                <a href="mailto:simon69193@gmail.com" className="text-timber-300 hover:text-accent transition-colors">simon69193@gmail.com</a>
               </li>
             </ul>
           </div>
@@ -91,8 +91,9 @@ export default function Footer() {
           </p>
           <div className="flex space-x-6 text-sm text-timber-400">
             <Link href="/about" className="hover:text-accent transition-colors">About Us</Link>
-            <Link href="/contact" className="hover:text-accent transition-colors">Contact</Link>
+            <Link href="/contact" className="hover:text-accent transition-colors">Contact Us</Link>
             <Link href="/catalog" className="hover:text-accent transition-colors">Products</Link>
+            <Link href="/admin/login" className="hover:text-accent transition-colors font-medium">Admin Portal</Link>
           </div>
         </div>
       </div>

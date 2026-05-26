@@ -85,8 +85,13 @@ export function calculateOrderTotals(
 export function assertExpectedTotal(expected: number | undefined, actual: number) {
   if (expected === undefined) return;
 
-  if (Math.abs(roundMoney(expected) - actual) > 0.01) {
-    throw new Error('Cart total mismatch. Please refresh your cart and try again.');
+  const diff = Math.abs(roundMoney(expected) - actual);
+  if (diff > 0.01) {
+    if (diff > 1.00) {
+      throw new Error(`Cart total mismatch. Frontend expected ${expected}, server calculated ${actual}.`);
+    } else {
+      console.warn(`[PricingService] Minor cart total mismatch (rounding): frontend expected ${expected}, server calculated ${actual}. Proceeding with server total.`);
+    }
   }
 }
 

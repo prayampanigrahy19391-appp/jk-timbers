@@ -11,7 +11,7 @@ const validCheckout = checkoutRequestSchema.safeParse({
   customer: {
     name: 'Test Customer',
     email: 'customer@example.com',
-    phone: '+91 9876543210',
+    phone: '9876543210',
     address: 'Test address',
     city: 'Bhubaneswar',
     zipCode: '751001',

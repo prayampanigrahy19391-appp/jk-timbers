@@ -1,6 +1,7 @@
 'use client';
 
-import { Suspense, useMemo } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
@@ -20,17 +21,70 @@ interface VisualizerCanvasProps {
   dimensions: number[];
 }
 
+// --- Local Error Boundary ---
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class CanvasErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  public state: ErrorBoundaryState = {
+    hasError: false,
+    error: null,
+  };
+
+  public static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('3D Canvas Error:', error, errorInfo);
+  }
+
+  public render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-[#131613] p-6 text-center">
+          <div className="text-red-500 font-bold mb-2">3D VISUALIZER ERROR</div>
+          <div className="text-timber-400 text-sm max-w-md mb-4">
+            {this.state.error?.message || 'An error occurred while loading the 3D Canvas.'}
+          </div>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="px-6 py-2.5 bg-gradient-to-r from-accent to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-wood-950 font-bold rounded-xl text-xs transition-colors shadow-lg"
+          >
+            Retry Loading
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 // --- 3D MODELS ---
 
 function PlywoodSheet({ textureUrl, width, height, thickness }: WoodMeshProps) {
   const texture = useTexture(textureUrl) as THREE.Texture;
-  const clonedTexture = useMemo(() => {
+  const [clonedTexture, setClonedTexture] = useState<THREE.Texture | null>(null);
+
+  useEffect(() => {
     const t = texture.clone();
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.repeat.set(width / 4, height / 4);
     t.needsUpdate = true;
-    return t;
+    setClonedTexture(t);
+    return () => {
+      t.dispose();
+    };
   }, [texture, width, height]);
+
+  if (!clonedTexture) return null;
 
   return (
     <mesh castShadow receiveShadow position={[0, height / 2, 0]}>
@@ -47,13 +101,20 @@ function PlywoodSheet({ textureUrl, width, height, thickness }: WoodMeshProps) {
 
 function DoorPanel({ textureUrl, width, height, thickness }: WoodMeshProps) {
   const texture = useTexture(textureUrl) as THREE.Texture;
-  const clonedTexture = useMemo(() => {
+  const [clonedTexture, setClonedTexture] = useState<THREE.Texture | null>(null);
+
+  useEffect(() => {
     const t = texture.clone();
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.repeat.set(width / 4, height / 4);
     t.needsUpdate = true;
-    return t;
+    setClonedTexture(t);
+    return () => {
+      t.dispose();
+    };
   }, [texture, width, height]);
+
+  if (!clonedTexture) return null;
 
   return (
     <group position={[0, height / 2, 0]}>
@@ -88,13 +149,20 @@ function DoorPanel({ textureUrl, width, height, thickness }: WoodMeshProps) {
 
 function TimberLog({ textureUrl, width, height, thickness }: WoodMeshProps) {
   const texture = useTexture(textureUrl) as THREE.Texture;
-  const clonedTexture = useMemo(() => {
+  const [clonedTexture, setClonedTexture] = useState<THREE.Texture | null>(null);
+
+  useEffect(() => {
     const t = texture.clone();
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.repeat.set(1, height / 2);
     t.needsUpdate = true;
-    return t;
+    setClonedTexture(t);
+    return () => {
+      t.dispose();
+    };
   }, [texture, height]);
+
+  if (!clonedTexture) return null;
 
   return (
     <mesh castShadow receiveShadow position={[0, height / 2, 0]}>
@@ -112,28 +180,29 @@ function TimberLog({ textureUrl, width, height, thickness }: WoodMeshProps) {
 
 export default function VisualizerCanvas({ formFactor, activeProduct, dimensions }: VisualizerCanvasProps) {
   return (
-    <Canvas shadows camera={{ position: [3, 2, 4], fov: 45 }}>
-      <color attach="background" args={['#131613']} />
-      <ambientLight intensity={0.6} />
-      <directionalLight castShadow position={[5, 10, 5]} intensity={1.5} shadow-mapSize={[2048, 2048]} shadow-bias={-0.0001} />
-      <directionalLight position={[-5, 5, -5]} intensity={0.5} />
-      
-      <Suspense fallback={null}>
-        {formFactor === 'sheet' && <PlywoodSheet textureUrl={activeProduct.image} width={dimensions[0]} height={dimensions[1]} thickness={dimensions[2]} />}
-        {formFactor === 'door' && <DoorPanel textureUrl={activeProduct.image} width={dimensions[0]} height={dimensions[1]} thickness={dimensions[2]} />}
-        {formFactor === 'log' && <TimberLog textureUrl={activeProduct.image} width={dimensions[0]} height={dimensions[1]} thickness={dimensions[2]} />}
-        <Environment preset="warehouse" />
-      </Suspense>
+    <CanvasErrorBoundary>
+      <Canvas shadows camera={{ position: [3, 2, 4], fov: 45 }}>
+        <color attach="background" args={['#131613']} />
+        <ambientLight intensity={0.6} />
+        <directionalLight castShadow position={[5, 10, 5]} intensity={1.5} shadow-mapSize={[2048, 2048]} shadow-bias={-0.0001} />
+        <directionalLight position={[-5, 5, -5]} intensity={0.5} />
+        
+        <Suspense fallback={null}>
+          {formFactor === 'sheet' && <PlywoodSheet textureUrl={activeProduct.image} width={dimensions[0]} height={dimensions[1]} thickness={dimensions[2]} />}
+          {formFactor === 'door' && <DoorPanel textureUrl={activeProduct.image} width={dimensions[0]} height={dimensions[1]} thickness={dimensions[2]} />}
+          {formFactor === 'log' && <TimberLog textureUrl={activeProduct.image} width={dimensions[0]} height={dimensions[1]} thickness={dimensions[2]} />}
+        </Suspense>
 
-      <ContactShadows position={[0, 0, 0]} opacity={0.7} scale={10} blur={2.5} far={4} color="#000000" />
-      <OrbitControls 
-        enablePan={true} 
-        autoRotate
-        autoRotateSpeed={2}
-        minDistance={2}
-        maxDistance={10}
-        target={[0, 1, 0]}
-      />
-    </Canvas>
+        <ContactShadows position={[0, 0, 0]} opacity={0.7} scale={10} blur={2.5} far={4} color="#000000" />
+        <OrbitControls 
+          enablePan={true} 
+          autoRotate
+          autoRotateSpeed={2}
+          minDistance={2}
+          maxDistance={10}
+          target={[0, 1, 0]}
+        />
+      </Canvas>
+    </CanvasErrorBoundary>
   );
 }

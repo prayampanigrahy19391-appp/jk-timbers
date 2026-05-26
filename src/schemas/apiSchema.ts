@@ -10,12 +10,12 @@ export const cartItemSchema = z.object({
 });
 
 export const checkoutCustomerSchema = z.object({
-  name: z.string().min(1),
-  email: z.string().email(),
-  phone: z.string().min(6),
-  address: z.string().min(1),
-  city: z.string().min(1),
-  zipCode: z.string().min(3),
+  name: z.string().min(2, 'Name must be at least 2 characters').regex(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces'),
+  email: z.string().email('Invalid email address'),
+  phone: z.string().regex(/^\d{10}$/, 'Phone number must be exactly 10 digits'),
+  address: z.string().min(5, 'Address must be at least 5 characters'),
+  city: z.string().min(2, 'City must be at least 2 characters').regex(/^[a-zA-Z\s]+$/, 'City can only contain letters and spaces'),
+  zipCode: z.string().regex(/^\d{6}$/, 'PIN/Zip Code must be exactly 6 digits'),
 });
 
 export const checkoutRequestSchema = z.object({
@@ -28,20 +28,20 @@ export const checkoutRequestSchema = z.object({
 });
 
 export const contactRequestSchema = z.object({
-  firstName: z.string().min(1),
-  lastName: z.string().optional(),
-  phone: z.string().min(6),
+  firstName: z.string().min(2, 'First Name must be at least 2 characters').regex(/^[a-zA-Z\s]+$/, 'First Name can only contain letters and spaces'),
+  lastName: z.string().regex(/^[a-zA-Z\s]*$/, 'Last Name can only contain letters').optional().or(z.literal('')),
+  phone: z.string().regex(/^\d{10}$/, 'Phone number must be exactly 10 digits'),
   message: z.string().optional(),
 });
 
 export const contractorRequestSchema = z.object({
-  firstName: z.string().min(1),
-  lastName: z.string().optional(),
+  firstName: z.string().min(2, 'First Name must be at least 2 characters').regex(/^[a-zA-Z\s]+$/, 'First Name can only contain letters and spaces'),
+  lastName: z.string().regex(/^[a-zA-Z\s]*$/, 'Last Name can only contain letters').optional().or(z.literal('')),
   company: z.string().optional(),
   gstNumber: z.string().optional(),
-  email: z.string().email(),
-  phone: z.string().min(6).optional(),
-  city: z.string().optional(),
+  email: z.string().email('Invalid email address'),
+  phone: z.string().regex(/^\d{10}$/, 'Phone number must be exactly 10 digits').optional().or(z.literal('')),
+  city: z.string().regex(/^[a-zA-Z\s]*$/, 'City can only contain letters and spaces').optional().or(z.literal('')),
   businessType: z.string().optional(),
 });
 

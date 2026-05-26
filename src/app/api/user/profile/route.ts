@@ -5,12 +5,12 @@ import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 
 const profileUpdateSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  phone: z.string().optional().or(z.literal('')),
+  name: z.string().min(2, 'Name must be at least 2 characters').regex(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces'),
+  phone: z.string().regex(/^\d{10}$/, 'Phone number must be exactly 10 digits').optional().or(z.literal('')),
   address: z.object({
     street: z.string().optional().or(z.literal('')),
-    city: z.string().optional().or(z.literal('')),
-    zipCode: z.string().optional().or(z.literal('')),
+    city: z.string().regex(/^[a-zA-Z\s]*$/, 'City can only contain letters and spaces').optional().or(z.literal('')),
+    zipCode: z.string().regex(/^\d{6}$/, 'PIN/Zip Code must be exactly 6 digits').optional().or(z.literal('')),
   }).optional(),
 });
 

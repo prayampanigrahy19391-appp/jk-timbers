@@ -256,38 +256,50 @@ export async function createAdminCategory(input: {
 }
 
 export async function createAdminProduct(input: ProductWriteInput) {
-  return prisma.$transaction(async (tx) => {
-    const product = await tx.product.create({
-      data: productDataFromInput(input),
-    });
+  return prisma.$transaction(
+    async (tx) => {
+      const product = await tx.product.create({
+        data: productDataFromInput(input),
+      });
 
-    await syncProductTags(tx, product.id, input.tagNames);
-    await syncProductMedia(tx, product.id, input.media);
-    await syncProductVariants(tx, product.id, input.variants);
+      await syncProductTags(tx, product.id, input.tagNames);
+      await syncProductMedia(tx, product.id, input.media);
+      await syncProductVariants(tx, product.id, input.variants);
 
-    return tx.product.findUniqueOrThrow({
-      where: { id: product.id },
-      include: { category: true, variants: true, media: true, productTags: { include: { tag: true } } },
-    });
-  });
+      return tx.product.findUniqueOrThrow({
+        where: { id: product.id },
+        include: { category: true, variants: true, media: true, productTags: { include: { tag: true } } },
+      });
+    },
+    {
+      maxWait: 15000,
+      timeout: 30000,
+    }
+  );
 }
 
 export async function updateAdminProduct(productId: string, input: ProductWriteInput) {
-  return prisma.$transaction(async (tx) => {
-    const updated = await tx.product.update({
-      where: { id: productId },
-      data: productDataFromInput(input),
-    });
+  return prisma.$transaction(
+    async (tx) => {
+      const updated = await tx.product.update({
+        where: { id: productId },
+        data: productDataFromInput(input),
+      });
 
-    await syncProductTags(tx, updated.id, input.tagNames);
-    await syncProductMedia(tx, updated.id, input.media);
-    await syncProductVariants(tx, updated.id, input.variants);
+      await syncProductTags(tx, updated.id, input.tagNames);
+      await syncProductMedia(tx, updated.id, input.media);
+      await syncProductVariants(tx, updated.id, input.variants);
 
-    return tx.product.findUniqueOrThrow({
-      where: { id: updated.id },
-      include: { category: true, variants: true, media: true, productTags: { include: { tag: true } } },
-    });
-  });
+      return tx.product.findUniqueOrThrow({
+        where: { id: updated.id },
+        include: { category: true, variants: true, media: true, productTags: { include: { tag: true } } },
+      });
+    },
+    {
+      maxWait: 15000,
+      timeout: 30000,
+    }
+  );
 }
 
 export async function archiveAdminProduct(productId: string) {

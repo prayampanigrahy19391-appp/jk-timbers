@@ -17,6 +17,23 @@ export default function ContactPage() {
     setIsSubmitting(true);
     setResult(null);
 
+    // Validations
+    if (!/^[a-zA-Z\s]+$/.test(formData.firstName)) {
+      setResult({ success: false, message: 'First Name can only contain letters and spaces.' });
+      setIsSubmitting(false);
+      return;
+    }
+    if (formData.lastName && !/^[a-zA-Z\s]*$/.test(formData.lastName)) {
+      setResult({ success: false, message: 'Last Name can only contain letters and spaces.' });
+      setIsSubmitting(false);
+      return;
+    }
+    if (!/^\d{10}$/.test(formData.phone)) {
+      setResult({ success: false, message: 'Phone number must be exactly 10 digits.' });
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const res = await fetch('/api/contact', {
         method: 'POST',
@@ -68,17 +85,17 @@ export default function ContactPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-timber-700 dark:text-timber-300 mb-2">First Name *</label>
-                  <input type="text" name="firstName" required value={formData.firstName} onChange={handleChange} className="w-full p-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-wood-50 dark:bg-timber-950 focus:ring-2 focus:ring-accent outline-none text-wood-950 dark:text-white" />
+                  <input type="text" name="firstName" required pattern="^[a-zA-Z\s]+$" title="First Name can only contain letters and spaces" value={formData.firstName} onChange={handleChange} className="w-full p-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-wood-50 dark:bg-timber-950 focus:ring-2 focus:ring-accent outline-none text-wood-950 dark:text-white" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-timber-700 dark:text-timber-300 mb-2">Last Name</label>
-                  <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className="w-full p-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-wood-50 dark:bg-timber-950 focus:ring-2 focus:ring-accent outline-none text-wood-950 dark:text-white" />
+                  <input type="text" name="lastName" pattern="^[a-zA-Z\s]*$" title="Last Name can only contain letters and spaces" value={formData.lastName} onChange={handleChange} className="w-full p-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-wood-50 dark:bg-timber-950 focus:ring-2 focus:ring-accent outline-none text-wood-950 dark:text-white" />
                 </div>
               </div>
               
               <div>
                 <label className="block text-sm font-medium text-timber-700 dark:text-timber-300 mb-2">Phone Number *</label>
-                <input type="tel" name="phone" required value={formData.phone} onChange={handleChange} className="w-full p-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-wood-50 dark:bg-timber-950 focus:ring-2 focus:ring-accent outline-none text-wood-950 dark:text-white" />
+                <input type="tel" name="phone" required pattern="^\d{10}$" maxLength={10} title="Phone number must be exactly 10 digits" value={formData.phone} onChange={handleChange} className="w-full p-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-wood-50 dark:bg-timber-950 focus:ring-2 focus:ring-accent outline-none text-wood-950 dark:text-white" />
               </div>
 
               <div>
@@ -102,7 +119,7 @@ export default function ContactPage() {
                 <div>
                   <h4 className="font-bold text-lg mb-1">Call Us</h4>
                   <p className="text-wood-400 text-sm mb-2">Mon-Sat, 9am to 8pm</p>
-                  <a href="tel:+918260761620" className="text-xl font-bold hover:text-accent transition-colors">+91 8260761620</a>
+                  <a href="tel:+918018827170" className="text-xl font-bold hover:text-accent transition-colors">+91 80188 27170</a>
                 </div>
               </div>
 
@@ -113,7 +130,7 @@ export default function ContactPage() {
                 <div>
                   <h4 className="font-bold text-wood-950 dark:text-white text-lg mb-1">Email Us</h4>
                   <p className="text-timber-500 text-sm mb-2">We reply within 24 hours</p>
-                  <a href="mailto:info@jktimbers.com" className="text-lg font-bold text-wood-800 dark:text-wood-300 hover:text-accent transition-colors">info@jktimbers.com</a>
+                  <a href="mailto:simon69193@gmail.com" className="text-lg font-bold text-wood-800 dark:text-wood-300 hover:text-accent transition-colors">simon69193@gmail.com</a>
                 </div>
               </div>
             </div>

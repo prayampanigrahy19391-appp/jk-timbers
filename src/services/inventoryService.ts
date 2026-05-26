@@ -87,17 +87,20 @@ async function applyProductStockChange(
   });
 
   if (quantityChange < 0 && product.lowStockThreshold !== null && stockAfter <= product.lowStockThreshold) {
-    try {
-      const { dispatchEcosystemEvent } = await import('@/services/webhookDispatchService');
-      await dispatchEcosystemEvent('inventory.low', {
-        productId,
-        sku: product.sku,
-        stock: stockAfter,
-        lowStockThreshold: product.lowStockThreshold,
-      });
-    } catch (e) {
-      console.error('Failed to dispatch low stock ecosystem event:', e);
-    }
+    // Dispatch low stock notification asynchronously to avoid blocking the database transaction
+    Promise.resolve().then(async () => {
+      try {
+        const { dispatchEcosystemEvent } = await import('@/services/webhookDispatchService');
+        await dispatchEcosystemEvent('inventory.low', {
+          productId,
+          sku: product.sku,
+          stock: stockAfter,
+          lowStockThreshold: product.lowStockThreshold,
+        });
+      } catch (e) {
+        console.error('Failed to dispatch low stock ecosystem event asynchronously:', e);
+      }
+    });
   }
 }
 
@@ -151,17 +154,20 @@ async function applyVariantStockChange(
   });
 
   if (quantityChange < 0 && variant.lowStockThreshold !== null && stockAfter <= variant.lowStockThreshold) {
-    try {
-      const { dispatchEcosystemEvent } = await import('@/services/webhookDispatchService');
-      await dispatchEcosystemEvent('inventory.low', {
-        variantId,
-        sku: variant.sku,
-        stock: stockAfter,
-        lowStockThreshold: variant.lowStockThreshold,
-      });
-    } catch (e) {
-      console.error('Failed to dispatch low stock ecosystem event:', e);
-    }
+    // Dispatch low stock notification asynchronously to avoid blocking the database transaction
+    Promise.resolve().then(async () => {
+      try {
+        const { dispatchEcosystemEvent } = await import('@/services/webhookDispatchService');
+        await dispatchEcosystemEvent('inventory.low', {
+          variantId,
+          sku: variant.sku,
+          stock: stockAfter,
+          lowStockThreshold: variant.lowStockThreshold,
+        });
+      } catch (e) {
+        console.error('Failed to dispatch low stock ecosystem event asynchronously:', e);
+      }
+    });
   }
 }
 
@@ -254,7 +260,10 @@ export async function applyManualInventoryAdjustment(input: InventoryAdjustmentI
         throw new Error('Product or variant id is required for inventory adjustment.');
       }
     },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    {
+      maxWait: 15000,
+      timeout: 30000,
+    }
   );
 }
 

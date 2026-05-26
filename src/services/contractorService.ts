@@ -46,40 +46,46 @@ export async function reviewContractorApplication(
     throw new Error('Contractor application not found.');
   }
 
-  return prisma.$transaction(async (tx) => {
-    let userId = application.userId;
+  return prisma.$transaction(
+    async (tx) => {
+      let userId = application.userId;
 
-    if (input.status === ApplicationStatus.APPROVED) {
-      const user = application.userId
-        ? await tx.user.update({
-            where: { id: application.userId },
-            data: { role: Role.CONTRACTOR },
-          })
-        : await tx.user.upsert({
-            where: { email: application.email },
-            update: { role: Role.CONTRACTOR, name: `${application.firstName} ${application.lastName ?? ''}`.trim() },
-            create: {
-              email: application.email,
-              name: `${application.firstName} ${application.lastName ?? ''}`.trim(),
-              phone: application.phone,
-              role: Role.CONTRACTOR,
-            },
-          });
+      if (input.status === ApplicationStatus.APPROVED) {
+        const user = application.userId
+          ? await tx.user.update({
+              where: { id: application.userId },
+              data: { role: Role.CONTRACTOR },
+            })
+          : await tx.user.upsert({
+              where: { email: application.email },
+              update: { role: Role.CONTRACTOR, name: `${application.firstName} ${application.lastName ?? ''}`.trim() },
+              create: {
+                email: application.email,
+                name: `${application.firstName} ${application.lastName ?? ''}`.trim(),
+                phone: application.phone,
+                role: Role.CONTRACTOR,
+              },
+            });
 
-      userId = user.id;
+        userId = user.id;
+      }
+
+      return tx.contractorApplication.update({
+        where: { id: applicationId },
+        data: {
+          status: input.status,
+          adminNotes: input.adminNotes,
+          discountRate: input.status === ApplicationStatus.APPROVED ? input.discountRate ?? application.discountRate ?? 0 : null,
+          approvedAt: input.status === ApplicationStatus.APPROVED ? new Date() : null,
+          reviewedAt: new Date(),
+          reviewedById: input.reviewedById,
+          userId,
+        },
+      });
+    },
+    {
+      maxWait: 15000,
+      timeout: 30000,
     }
-
-    return tx.contractorApplication.update({
-      where: { id: applicationId },
-      data: {
-        status: input.status,
-        adminNotes: input.adminNotes,
-        discountRate: input.status === ApplicationStatus.APPROVED ? input.discountRate ?? application.discountRate ?? 0 : null,
-        approvedAt: input.status === ApplicationStatus.APPROVED ? new Date() : null,
-        reviewedAt: new Date(),
-        reviewedById: input.reviewedById,
-        userId,
-      },
-    });
-  });
+  );
 }

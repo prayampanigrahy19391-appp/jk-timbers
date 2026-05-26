@@ -7,7 +7,7 @@ async function main() {
   console.log('🌱 Starting database seed...');
 
   // 1. Create Default Admin
-  const adminEmail = 'admin@jktimbers.com';
+  const adminEmail = 'simon69193@gmail.com';
   const adminSeedPassword = process.env.ADMIN_SEED_PASSWORD;
 
   if (!adminSeedPassword || adminSeedPassword.length < 12) {

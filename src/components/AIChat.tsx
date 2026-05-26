@@ -36,7 +36,7 @@ const faqResponses: { keywords: string[]; response: string }[] = [
   },
   {
     keywords: ['contact', 'phone', 'call', 'whatsapp', 'number'],
-    response: 'You can reach us at:\n📞 +91 8260761620\n📧 info@jktimbers.com\n📍 Near New Bus Stand, Berhampur, Odisha\n\nWorking hours: Mon-Sat, 9 AM to 8 PM.',
+    response: 'You can reach us at:\n📞 +91 8018827170\n📧 simon69193@gmail.com\n📍 Near New Bus Stand, Berhampur, Odisha\n\nWorking hours: Mon-Sat, 9 AM to 8 PM.',
   },
   {
     keywords: ['bulk', 'contractor', 'wholesale', 'dealer'],
@@ -63,7 +63,7 @@ function getAIResponse(input: string): string {
       return faq.response;
     }
   }
-  return "I'm not sure about that. For specific queries, I recommend:\n\n• Browse our Product Catalog\n• Use the Smart Calculator for estimates\n• Call us at +91 8260761620\n\nOr try asking about pricing, delivery, plywood, teak wood, or bulk orders!";
+  return "I'm not sure about that. For specific queries, I recommend:\n\n• Browse our Product Catalog\n• Use the Smart Calculator for estimates\n• Call us at +91 8018827170\n\nOr try asking about pricing, delivery, plywood, teak wood, or bulk orders!";
 }
 
 export default function AIChat() {

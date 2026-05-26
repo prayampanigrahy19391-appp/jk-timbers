@@ -1,5 +1,6 @@
 import { getOrCreateQueue } from '@/lib/queue';
 import { logger } from '@/lib/logger';
+import { sendEmail } from '@/lib/nodemailer';
 
 export interface EmailJobData {
   to: string;
@@ -9,7 +10,7 @@ export interface EmailJobData {
   templateData?: Record<string, unknown>;
 }
 
-// Background email processor mock integration (AWS SES / SendGrid / Resend)
+// Background email processor integration via Nodemailer
 const processEmailJob = async (job: { data: EmailJobData }) => {
   const { to, subject, body, templateId, templateData } = job.data;
 
@@ -21,8 +22,12 @@ const processEmailJob = async (job: { data: EmailJobData }) => {
     hasTemplateData: !!templateData,
   });
 
-  // Simulate remote SMTP / API delivery delay
-  await new Promise((resolve) => setTimeout(resolve, 800));
+  await sendEmail({
+    to,
+    subject,
+    text: body,
+    html: body, // Support html body if tags are present
+  });
 
   // Log successful dispatch
   logger.info(`[EmailJobProcessor] Email sent successfully to ${to}`);

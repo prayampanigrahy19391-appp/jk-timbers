@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useRef } from 'react';
 import { parsePrice } from '@/utils/price';
 import type { CartItem } from '@/types/product';
 
@@ -87,6 +87,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartToken, setCartToken] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const lastSyncedItemsRef = useRef<CartItem[]>([]);
 
   useEffect(() => {
     const savedCart = localStorage.getItem('jk-timbers-cart');
@@ -95,7 +96,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (savedCart) {
       try {
         // eslint-disable-next-line
-        setItems(JSON.parse(savedCart));
+        const parsed = JSON.parse(savedCart);
+        setItems(parsed);
+        lastSyncedItemsRef.current = parsed;
       } catch (error) {
         localStorage.removeItem('jk-timbers-cart');
         if (process.env.NODE_ENV !== 'production') {
@@ -128,7 +131,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       .then((res) => res.ok ? res.json() : null)
       .then((data) => {
         if (data?.cart?.items?.length) {
-          setItems(mapServerItems(data.cart.items));
+          const loadedItems = mapServerItems(data.cart.items);
+          setItems(loadedItems);
+          lastSyncedItemsRef.current = loadedItems;
         }
       })
       .catch((error) => {
@@ -141,7 +146,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isInitialized || (items.length === 0 && !cartToken)) return;
 
-    const syncCart = async () => {
+    // Skip network request if local state matches the last successfully synced state
+    if (cartItemsMatch(items, lastSyncedItemsRef.current)) {
+      return;
+    }
+
+    let active = true;
+
+    const timer = setTimeout(async () => {
       const payload = {
         token: cartToken,
         items: items.map((item) => ({
@@ -164,6 +176,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      if (!active) return;
+
       const data = await readCartApiResponse(response);
       if (!response.ok) {
         if (process.env.NODE_ENV !== 'production') {
@@ -178,13 +192,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       if (data?.cart?.items) {
         const serverItems = mapServerItems(data.cart.items);
+        lastSyncedItemsRef.current = serverItems;
         setItems((currentItems) => (
           cartItemsMatch(currentItems, serverItems) ? currentItems : serverItems
         ));
       }
-    };
+    }, 400);
 
-    void syncCart();
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [items, cartToken, isInitialized]);
 
   const addToCart = (newItem: Omit<CartItem, 'quantity'>) => {
@@ -218,6 +236,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = () => {
     setItems([]);
+    lastSyncedItemsRef.current = [];
     setCartToken(null);
     localStorage.removeItem('jk-timbers-cart');
     localStorage.removeItem('jk-timbers-cart-token');

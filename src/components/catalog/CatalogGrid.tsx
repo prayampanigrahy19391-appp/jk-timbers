@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Filter, Search, ChevronDown, ShoppingCart } from 'lucide-react';
@@ -14,10 +14,12 @@ export function CatalogGrid({ products }: { products: StaticProduct[] }) {
   const [searchQuery, setSearchQuery] = useState('');
   const { addToCart } = useCart();
 
-  const filteredProducts = products.filter(p => 
-    (activeCategory === 'All' || p.category === activeCategory) &&
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => 
+      (activeCategory === 'All' || p.category === activeCategory) &&
+      p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [products, activeCategory, searchQuery]);
 
   return (
     <div className="bg-wood-50 dark:bg-timber-950 min-h-screen py-12">

@@ -76,6 +76,28 @@ export default function ProfileEditorModal({ isOpen, onClose, userEmail }: Profi
     setIsSaving(true);
     setMessage(null);
 
+    // Validations
+    if (!/^[a-zA-Z\s]+$/.test(formData.name)) {
+      setMessage({ type: 'error', text: 'Name can only contain letters and spaces.' });
+      setIsSaving(false);
+      return;
+    }
+    if (formData.phone && !/^\d{10}$/.test(formData.phone)) {
+      setMessage({ type: 'error', text: 'Phone number must be exactly 10 digits.' });
+      setIsSaving(false);
+      return;
+    }
+    if (formData.address.city && !/^[a-zA-Z\s]+$/.test(formData.address.city)) {
+      setMessage({ type: 'error', text: 'City name can only contain letters and spaces.' });
+      setIsSaving(false);
+      return;
+    }
+    if (formData.address.zipCode && !/^\d{6}$/.test(formData.address.zipCode)) {
+      setMessage({ type: 'error', text: 'PIN/Zip Code must be exactly 6 digits.' });
+      setIsSaving(false);
+      return;
+    }
+
     try {
       const res = await fetch('/api/user/profile', {
         method: 'PUT',
@@ -161,14 +183,14 @@ export default function ProfileEditorModal({ isOpen, onClose, userEmail }: Profi
                         <label className="block text-sm font-medium text-timber-700 dark:text-timber-300 mb-1">Full Name</label>
                         <div className="relative">
                           <User className="absolute left-3 top-1/2 -translate-y-1/2 text-timber-400" size={18} />
-                          <input type="text" name="name" value={formData.name} onChange={handleChange} required className="w-full pl-10 p-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-white dark:bg-timber-950 focus:ring-2 focus:ring-accent outline-none text-wood-950 dark:text-white" />
+                          <input type="text" name="name" value={formData.name} onChange={handleChange} required pattern="^[a-zA-Z\s]+$" title="Name can only contain letters and spaces" className="w-full pl-10 p-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-white dark:bg-timber-950 focus:ring-2 focus:ring-accent outline-none text-wood-950 dark:text-white" />
                         </div>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-timber-700 dark:text-timber-300 mb-1">Phone Number</label>
                         <div className="relative">
                           <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-timber-400" size={18} />
-                          <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full pl-10 p-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-white dark:bg-timber-950 focus:ring-2 focus:ring-accent outline-none text-wood-950 dark:text-white" />
+                          <input type="tel" name="phone" value={formData.phone} onChange={handleChange} pattern="^\d{10}$" maxLength={10} title="Phone number must be exactly 10 digits" className="w-full pl-10 p-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-white dark:bg-timber-950 focus:ring-2 focus:ring-accent outline-none text-wood-950 dark:text-white" />
                         </div>
                       </div>
                     </div>
@@ -185,11 +207,11 @@ export default function ProfileEditorModal({ isOpen, onClose, userEmail }: Profi
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-timber-700 dark:text-timber-300 mb-1">City</label>
-                        <input type="text" name="address.city" value={formData.address.city} onChange={handleChange} className="w-full p-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-white dark:bg-timber-950 focus:ring-2 focus:ring-accent outline-none text-wood-950 dark:text-white" />
+                        <input type="text" name="address.city" value={formData.address.city} onChange={handleChange} pattern="^[a-zA-Z\s]+$" title="City name can only contain letters and spaces" className="w-full p-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-white dark:bg-timber-950 focus:ring-2 focus:ring-accent outline-none text-wood-950 dark:text-white" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-timber-700 dark:text-timber-300 mb-1">PIN / Zip Code</label>
-                        <input type="text" name="address.zipCode" value={formData.address.zipCode} onChange={handleChange} className="w-full p-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-white dark:bg-timber-950 focus:ring-2 focus:ring-accent outline-none text-wood-950 dark:text-white" />
+                        <input type="text" name="address.zipCode" value={formData.address.zipCode} onChange={handleChange} pattern="^\d{6}$" maxLength={6} title="PIN/Zip code must be exactly 6 digits" className="w-full p-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-white dark:bg-timber-950 focus:ring-2 focus:ring-accent outline-none text-wood-950 dark:text-white" />
                       </div>
                     </div>
                   </div>

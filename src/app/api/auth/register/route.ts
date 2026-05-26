@@ -6,13 +6,13 @@ import { Prisma, Role } from '@prisma/client';
 import { logger } from '@/lib/logger';
 
 const registerSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address').optional().or(z.literal('')),
-  phone: z.string().min(10, 'Phone must be at least 10 characters').optional().or(z.literal('')),
+  name: z.string().min(2, 'Name must be at least 2 characters').regex(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces'),
+  email: z.string().email('Invalid email address'),
+  phone: z.string().regex(/^\d{10}$/, 'Phone number must be exactly 10 digits'),
+  address: z.string().min(5, 'Address must be at least 5 characters'),
+  city: z.string().min(2, 'City must be at least 2 characters').regex(/^[a-zA-Z\s]+$/, 'City can only contain letters and spaces'),
+  zipCode: z.string().regex(/^\d{6}$/, 'PIN/Zip Code must be exactly 6 digits'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-}).refine((data) => data.email || data.phone, {
-  message: "Either email or phone is required",
-  path: ["email"],
 });
 
 export async function POST(req: Request) {
@@ -46,6 +46,8 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    const { address, city, zipCode } = result.data;
+
     await prisma.user.create({
       data: {
         name,
@@ -53,6 +55,14 @@ export async function POST(req: Request) {
         phone: normalizedPhone,
         password: hashedPassword,
         role: Role.CUSTOMER,
+        addresses: {
+          create: {
+            street: address,
+            city,
+            zipCode,
+            isDefault: true,
+          }
+        }
       },
     });
 

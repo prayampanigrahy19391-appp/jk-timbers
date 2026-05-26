@@ -18,10 +18,20 @@ export default function LoginPage() {
     setIsLoading(true);
     setError('');
 
+    const cleanIdentifier = identifier.trim();
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanIdentifier);
+    const isPhone = /^\d{10}$/.test(cleanIdentifier);
+
+    if (!isEmail && !isPhone) {
+      setError('Please enter a valid email address or a 10-digit phone number (digits only).');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const res = await signIn('credentials', {
         redirect: false,
-        identifier,
+        identifier: cleanIdentifier,
         password,
       });
 

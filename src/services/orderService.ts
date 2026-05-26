@@ -334,12 +334,16 @@ export async function createCheckoutOrder(options: {
         include: { paymentAttempts: true },
       });
     },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    {
+      maxWait: 15000,
+      timeout: 30000,
+    }
   );
 
   // Trigger background actions outside transaction after successful commit!
   try {
     const { queueEmailNotification } = await import('@/services/jobs/emailJob');
+    const { queueWhatsAppNotification } = await import('@/services/jobs/whatsappJob');
     const { dispatchEcosystemEvent } = await import('@/services/webhookDispatchService');
 
     await queueEmailNotification({
@@ -347,6 +351,11 @@ export async function createCheckoutOrder(options: {
       subject: `Order Placed - ${order.orderNumber}`,
       body: `Hi ${order.customerName},\n\nYour order ${order.orderNumber} for ₹${Number(order.total).toLocaleString('en-IN')} has been placed successfully.\n\nThank you for shopping with JK Timbers!\n\nBest regards,\nJK Timbers Team`,
     }).catch(err => console.error('Failed to queue email notification:', err));
+
+    await queueWhatsAppNotification({
+      to: order.phone,
+      message: `Hi ${order.customerName}, your order ${order.orderNumber} for ₹${Number(order.total).toLocaleString('en-IN')} has been placed successfully. Thank you for choosing JK Timbers!`,
+    }).catch(err => console.error('Failed to queue WhatsApp notification:', err));
 
     await dispatchEcosystemEvent('order.created', {
       orderId: order.id,
@@ -459,11 +468,15 @@ export async function updateOrderPaymentStatus(orderId: string, status: PaymentS
     }
 
     return updatedOrder;
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }, {
+    maxWait: 15000,
+    timeout: 30000,
+  });
 
   // Post commit background jobs
   try {
     const { queueEmailNotification } = await import('@/services/jobs/emailJob');
+    const { queueWhatsAppNotification } = await import('@/services/jobs/whatsappJob');
     if (status === PaymentStatus.PAID && invoiceNumberResolved) {
       const { queueInvoiceGeneration } = await import('@/services/jobs/invoiceJob');
       await queueInvoiceGeneration({
@@ -476,12 +489,22 @@ export async function updateOrderPaymentStatus(orderId: string, status: PaymentS
         subject: `Payment Confirmed - Order ${updated.orderNumber}`,
         body: `Hi ${updated.customerName},\n\nWe have confirmed your payment of ₹${Number(updated.total).toLocaleString('en-IN')} for order ${updated.orderNumber}.\n\nYour invoice (${invoiceNumberResolved}) is being generated.\n\nThank you,\nJK Timbers Team`,
       }).catch(err => console.error('Failed to queue email notification:', err));
+
+      await queueWhatsAppNotification({
+        to: updated.phone,
+        message: `Hi ${updated.customerName}, payment of ₹${Number(updated.total).toLocaleString('en-IN')} is confirmed for order ${updated.orderNumber}. Thank you, JK Timbers Team.`,
+      }).catch(err => console.error('Failed to queue WhatsApp notification:', err));
     } else if (status === PaymentStatus.FAILED) {
       await queueEmailNotification({
         to: updated.email,
         subject: `Payment Failed - Order ${updated.orderNumber}`,
         body: `Hi ${updated.customerName},\n\nYour payment attempt for order ${updated.orderNumber} failed. The order has been cancelled and stock has been restored to inventory.\n\nIf you believe this was an error, please try placing the order again.\n\nThank you,\nJK Timbers Team`,
       }).catch(err => console.error('Failed to queue email notification:', err));
+
+      await queueWhatsAppNotification({
+        to: updated.phone,
+        message: `Hi ${updated.customerName}, payment failed for order ${updated.orderNumber}. The order has been cancelled. Please try again.`,
+      }).catch(err => console.error('Failed to queue WhatsApp notification:', err));
     }
   } catch (e) {
     console.error('Failed to trigger post-payment background events:', e);
@@ -570,12 +593,16 @@ export async function updateOrderStatusById(
         },
       });
     },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    {
+      maxWait: 15000,
+      timeout: 30000,
+    }
   );
 
   // Post commit background jobs
   try {
     const { queueEmailNotification } = await import('@/services/jobs/emailJob');
+    const { queueWhatsAppNotification } = await import('@/services/jobs/whatsappJob');
     const { dispatchEcosystemEvent } = await import('@/services/webhookDispatchService');
 
     await queueEmailNotification({
@@ -583,6 +610,11 @@ export async function updateOrderStatusById(
       subject: `Order Status Updated: ${newStatus} - ${order.orderNumber}`,
       body: `Hi ${order.customerName},\n\nYour order ${order.orderNumber} status has been updated to "${newStatus}".\n\nThank you,\nJK Timbers Team`,
     }).catch(err => console.error('Failed to queue email notification:', err));
+
+    await queueWhatsAppNotification({
+      to: order.phone,
+      message: `Hi ${order.customerName}, your order ${order.orderNumber} status has been updated to "${newStatus}". Thank you, JK Timbers.`,
+    }).catch(err => console.error('Failed to queue WhatsApp notification:', err));
 
     if (newStatus === OrderStatus.SHIPPED) {
       await dispatchEcosystemEvent('order.shipped', {

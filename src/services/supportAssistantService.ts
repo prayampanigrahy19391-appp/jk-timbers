@@ -32,8 +32,8 @@ export async function handleSupportQuery(query: string, session: SupportSession)
     };
   }
 
-  // 1. Order Status Inquiries: e.g. "where is my order JK-2026-102"
-  const orderMatch = lowercaseQuery.match(/jk-\d+-\w+/);
+  // 1. Order Status Inquiries: e.g. "where is my order JK-20260525-48BFD0E1"
+  const orderMatch = lowercaseQuery.match(/jk-?\d{8}-?[a-f0-9]{8}/);
   if (orderMatch && orderMatch[0]) {
     const orderNumber = orderMatch[0].toUpperCase();
     

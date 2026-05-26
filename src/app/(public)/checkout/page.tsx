@@ -1,15 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCart } from '@/components/cart/CartContext';
-import { ShieldCheck, Truck, ArrowRight, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, Truck, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
 import { parsePrice } from '@/utils/price';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 export default function CheckoutPage() {
   const { items, cartTotal, clearCart, cartToken } = useCart();
   const router = useRouter();
+  const { data: session, status } = useSession();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -24,6 +26,39 @@ export default function CheckoutPage() {
   const [paymentProvider, setPaymentProvider] = useState('UPI');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  // Redirect to login if unauthenticated
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login?callbackUrl=/checkout');
+    }
+  }, [status, router]);
+
+  // Pre-fill profile details from API
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch('/api/user/profile');
+        if (res.ok) {
+          const data = await res.json();
+          setFormData({
+            name: data.user.name || '',
+            email: data.user.email || '',
+            phone: data.user.phone || '',
+            address: data.address?.street || '',
+            city: data.address?.city || '',
+            zipCode: data.address?.zipCode || '',
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching user profile for checkout:', error);
+      }
+    };
+
+    fetchProfile();
+  }, [status]);
 
   const providerOptions = [
     { value: 'UPI', label: 'Generic UPI' },
@@ -58,6 +93,28 @@ export default function CheckoutPage() {
     
     setIsSubmitting(true);
     setSubmitError('');
+
+    // Validations
+    if (!/^[a-zA-Z\s]+$/.test(formData.name)) {
+      setSubmitError('Name can only contain letters and spaces.');
+      setIsSubmitting(false);
+      return;
+    }
+    if (!/^\d{10}$/.test(formData.phone)) {
+      setSubmitError('Phone number must be exactly 10 digits.');
+      setIsSubmitting(false);
+      return;
+    }
+    if (!/^[a-zA-Z\s]+$/.test(formData.city)) {
+      setSubmitError('City can only contain letters and spaces.');
+      setIsSubmitting(false);
+      return;
+    }
+    if (!/^\d{6}$/.test(formData.zipCode)) {
+      setSubmitError('PIN/Zip Code must be exactly 6 digits.');
+      setIsSubmitting(false);
+      return;
+    }
     
     try {
       let activeCartToken = cartToken;
@@ -169,6 +226,15 @@ export default function CheckoutPage() {
     }
   };
 
+  if (status === 'loading') {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center bg-wood-50 dark:bg-timber-950">
+        <Loader2 className="animate-spin text-accent mb-4" size={48} />
+        <p className="text-wood-950 dark:text-white font-medium">Checking authorization...</p>
+      </div>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center bg-wood-50 dark:bg-timber-950">
@@ -198,15 +264,44 @@ export default function CheckoutPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
                   <label className="block text-sm font-medium text-timber-600 dark:text-timber-400 mb-2">Full Name *</label>
-                  <input required type="text" name="name" value={formData.name} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-wood-50 dark:bg-timber-950 text-wood-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent" placeholder="e.g. Rahul Kumar" />
+                  <input 
+                    required 
+                    type="text" 
+                    name="name" 
+                    pattern="^[a-zA-Z\s]+$" 
+                    title="Name can only contain letters and spaces" 
+                    value={formData.name} 
+                    onChange={handleInputChange} 
+                    className="w-full px-4 py-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-wood-50 dark:bg-timber-950 text-wood-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent" 
+                    placeholder="e.g. Rahul Kumar" 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-timber-600 dark:text-timber-400 mb-2">Email Address *</label>
-                  <input required type="email" name="email" value={formData.email} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-wood-50 dark:bg-timber-950 text-wood-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent" placeholder="e.g. rahul@example.com" />
+                  <input 
+                    required 
+                    type="email" 
+                    name="email" 
+                    value={formData.email} 
+                    onChange={handleInputChange} 
+                    className="w-full px-4 py-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-wood-50 dark:bg-timber-950 text-wood-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent" 
+                    placeholder="e.g. rahul@example.com" 
+                  />
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-timber-600 dark:text-timber-400 mb-2">WhatsApp / Phone Number *</label>
-                  <input required type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-wood-50 dark:bg-timber-950 text-wood-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent" placeholder="+91 9876543210" />
+                  <input 
+                    required 
+                    type="tel" 
+                    name="phone" 
+                    pattern="^\d{10}$" 
+                    maxLength={10} 
+                    title="Phone number must be exactly 10 digits" 
+                    value={formData.phone} 
+                    onChange={handleInputChange} 
+                    className="w-full px-4 py-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-wood-50 dark:bg-timber-950 text-wood-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent" 
+                    placeholder="e.g. 9876543210" 
+                  />
                   <p className="text-xs text-timber-500 mt-1">We will send delivery updates to this number.</p>
                 </div>
               </div>
@@ -220,11 +315,32 @@ export default function CheckoutPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-timber-600 dark:text-timber-400 mb-2">City *</label>
-                  <input required type="text" name="city" value={formData.city} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-wood-50 dark:bg-timber-950 text-wood-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent" placeholder="Bhubaneswar" />
+                  <input 
+                    required 
+                    type="text" 
+                    name="city" 
+                    pattern="^[a-zA-Z\s]+$" 
+                    title="City name can only contain letters and spaces" 
+                    value={formData.city} 
+                    onChange={handleInputChange} 
+                    className="w-full px-4 py-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-wood-50 dark:bg-timber-950 text-wood-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent" 
+                    placeholder="Bhubaneswar" 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-timber-600 dark:text-timber-400 mb-2">PIN / Zip Code *</label>
-                  <input required type="text" name="zipCode" value={formData.zipCode} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-wood-50 dark:bg-timber-950 text-wood-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent" placeholder="751001" />
+                  <input 
+                    required 
+                    type="text" 
+                    name="zipCode" 
+                    pattern="^\d{6}$" 
+                    maxLength={6} 
+                    title="PIN/Zip code must be exactly 6 digits" 
+                    value={formData.zipCode} 
+                    onChange={handleInputChange} 
+                    className="w-full px-4 py-3 rounded-xl border border-wood-200 dark:border-timber-700 bg-wood-50 dark:bg-timber-950 text-wood-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent" 
+                    placeholder="751001" 
+                  />
                 </div>
               </div>
             </form>
