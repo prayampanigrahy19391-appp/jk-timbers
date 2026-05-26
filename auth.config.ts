@@ -75,9 +75,13 @@ export const authConfig: NextAuthConfig = {
               const normalizedEmail = identifier.toLowerCase();
               const normalizedPhone = identifier.replace(/\D/g, '');
 
+              // Allow 'simon' to map to the admin email
+              const lookupEmail = normalizedEmail === 'simon' ? 'simon69193@gmail.com' : normalizedEmail;
+
               const user = await prisma.user.findFirst({
                 where: {
                   OR: [
+                    { email: lookupEmail },
                     ...(isEmail ? [{ email: normalizedEmail }] : []),
                     ...(!isEmail && normalizedPhone ? [{ phone: normalizedPhone }] : []),
                   ],

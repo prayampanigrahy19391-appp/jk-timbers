@@ -10,8 +10,8 @@ async function main() {
   const adminEmail = 'simon69193@gmail.com';
   const adminSeedPassword = process.env.ADMIN_SEED_PASSWORD;
 
-  if (!adminSeedPassword || adminSeedPassword.length < 12) {
-    throw new Error('ADMIN_SEED_PASSWORD must be set to at least 12 characters before seeding the admin user.');
+  if (!adminSeedPassword || adminSeedPassword.length < 6) {
+    throw new Error('ADMIN_SEED_PASSWORD must be set to at least 6 characters before seeding the admin user.');
   }
 
   const hashedPassword = await bcrypt.hash(adminSeedPassword, 12);

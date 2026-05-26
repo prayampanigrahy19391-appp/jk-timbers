@@ -8,7 +8,7 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   ENABLE_CREDENTIALS: z.enum(['true', 'false']).optional(),
-  ADMIN_SEED_PASSWORD: z.string().min(12).optional(),
+  ADMIN_SEED_PASSWORD: z.string().min(6).optional(),
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),

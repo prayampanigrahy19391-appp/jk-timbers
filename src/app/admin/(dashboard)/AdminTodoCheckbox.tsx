@@ -1,15 +1,16 @@
 'use client';
-import { useState } from 'react';
+import { useState, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function AdminTodoCheckbox({ orderId, status }: { orderId: string, status: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const isCompleted = status !== 'PENDING';
+  const [localChecked, setLocalChecked] = useState(status !== 'PENDING');
 
   const handleToggle = async () => {
-    if (isCompleted || loading) return;
+    if (localChecked || loading) return;
     setLoading(true);
+    setLocalChecked(true); // Optimistic UI update
     try {
       const res = await fetch(`/api/admin/orders/${orderId}`, {
         method: 'PATCH',
@@ -17,10 +18,18 @@ export default function AdminTodoCheckbox({ orderId, status }: { orderId: string
         body: JSON.stringify({ status: 'CONFIRMED', notes: 'Order confirmed from dashboard action list.' })
       });
       if (res.ok) {
-        router.refresh();
+        startTransition(() => {
+          router.refresh();
+        });
+      } else {
+        setLocalChecked(false); // Revert if failed
+        const errorData = await res.json().catch(() => ({}));
+        alert(`Failed to update order status: ${errorData.message || res.statusText || 'Unknown error'}`);
       }
     } catch (e) {
+      setLocalChecked(false); // Revert if network error
       console.error(e);
+      alert(`Network error: ${e instanceof Error ? e.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -30,10 +39,10 @@ export default function AdminTodoCheckbox({ orderId, status }: { orderId: string
     <div className="flex items-center gap-3">
       <input 
         type="checkbox" 
-        checked={isCompleted}
+        checked={localChecked}
         onChange={handleToggle}
-        disabled={isCompleted || loading}
-        className={`w-5 h-5 rounded border-wood-300 dark:border-timber-700 ${isCompleted ? 'accent-green-500 cursor-not-allowed opacity-50' : 'accent-accent cursor-pointer'}`} 
+        disabled={localChecked || loading}
+        className={`w-5 h-5 rounded border-wood-300 dark:border-timber-700 ${localChecked ? 'accent-green-500 cursor-not-allowed opacity-50' : 'accent-accent cursor-pointer'}`} 
       />
       {loading && <span className="text-xs text-timber-500 animate-pulse">Updating...</span>}
     </div>

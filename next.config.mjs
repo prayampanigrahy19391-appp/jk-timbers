@@ -17,6 +17,7 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  allowedDevOrigins: ['192.168.31.124', 'localhost:3000'],
   turbopack: {
     root: __dirname,
   },
